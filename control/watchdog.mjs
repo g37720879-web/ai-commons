@@ -32,6 +32,7 @@ export class Watchdog {
       await this.ctx.storage.put('window',w);
     }catch(error){w.last_provider_error=error.message;await this.ctx.storage.put('window',w);}
   }
+  async alarm(){await this.ctx.blockConcurrencyWhile(()=>this.tick());const w=await this.ctx.storage.get('window');if(w && ['armed','checking','rollback_pending'].includes(w.status))await this.ctx.storage.setAlarm(Date.now()+60000);}
   async fetch(request) {
     const path=new URL(request.url).pathname;
     if(path==='/v1/status' && request.method==='GET'){
@@ -42,7 +43,7 @@ export class Watchdog {
       if(!this.env.WATCHDOG_TOKEN || request.headers.get('Authorization')!=='Bearer '+this.env.WATCHDOG_TOKEN)return json({error:'unauthorized'},403);
       const text=await request.text();if(text.length>3000)return json({error:'too_large'},413);let b;try{b=JSON.parse(text);}catch{return json({error:'invalid_json'},400);}if(!b || typeof b!=='object')return json({error:'invalid_window'},400);
       if(!/^[a-f0-9]{64}$/.test(b.release_id)||![b.previous_version,b.target_version].every(x=>/^[a-f0-9-]{36}$/.test(x))||b.previous_version===b.target_version||!Number.isSafeInteger(b.checkpoint?.sequence)||b.checkpoint.sequence<0||!Number.isSafeInteger(b.deadline)||b.deadline<=Date.now()||b.deadline>Date.now()+1200000||!/^[a-f0-9]{64}$/.test(b.checkpoint?.hash||''))return json({error:'invalid_window'},400);
-      return this.ctx.blockConcurrencyWhile(async()=>{const old=await this.ctx.storage.get('window');if(old && ['armed','checking','rollback_pending'].includes(old.status)){if(old.release_id===b.release_id && old.target_version===b.target_version && old.previous_version===b.previous_version)return json({armed:true,replayed:true});return json({error:'another_upgrade_in_progress'},409);}await this.ctx.storage.put('window',{...b,status:'armed',health_passes:0,failures:0});return json({armed:true});});
+      return this.ctx.blockConcurrencyWhile(async()=>{const old=await this.ctx.storage.get('window');if(old && ['armed','checking','rollback_pending'].includes(old.status)){if(old.release_id===b.release_id && old.target_version===b.target_version && old.previous_version===b.previous_version){await this.ctx.storage.setAlarm(Date.now()+60000);return json({armed:true,replayed:true});}return json({error:'another_upgrade_in_progress'},409);}await this.ctx.storage.put('window',{...b,status:'armed',health_passes:0,failures:0});await this.ctx.storage.setAlarm(Date.now()+60000);return json({armed:true});});
     }
     return json({error:'not_found'},404);
   }

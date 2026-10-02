@@ -5,7 +5,7 @@ import {CONTROL_SCHEMA,hash,validateArtifact,releaseSchema,policy} from '../cont
 import {delegationCommand,releaseAuthorized,publicOperation} from '../control/delegation.mjs';
 import {executeOperations} from '../control/operations.mjs';
 import {Watchdog} from '../control/watchdog.mjs';
-function context(){const map=new Map();let queue=Promise.resolve();const storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),transaction:async f=>f(storage)};return {map,storage,blockConcurrencyWhile(f){const p=queue.then(f);queue=p.catch(()=>{});return p;}};}
+function context(){const map=new Map();let queue=Promise.resolve();const storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),setAlarm:async at=>map.set('alarm',at),transaction:async f=>f(storage)};return {map,storage,blockConcurrencyWhile(f){const p=queue.then(f);queue=p.catch(()=>{});return p;}};}
 async function setup(){const ctx=context(),a=new Authority(ctx,{});await a.state();return {a,ctx};}
 const emit=async()=>{};
 function state(){return {version:1,roles:['governor','reviewer','operator'].map(role=>({id:role,key_id:'root',role,expires_at:null})),resident:{key_id:'root'},operations:[],backups:[],releases:[]};}
@@ -76,4 +76,9 @@ test('GitHub App keys accept real PKCS1/PKCS8 and sign verifiable short-lived JW
 test('GitHub setup requires a private ticket and stores only a session digest publicly inaccessible',async()=>{
  const {a,ctx}=await setup();a.env.GH_SETUP_TOKEN='local-private-setup-ticket';let response=await a.fetch(new Request('https://test/v1/setup/github'));assert.equal(response.status,403);
  response=await a.fetch(new Request('https://test/v1/setup/github?key=local-private-setup-ticket'));assert.equal(response.status,200);assert.match(response.headers.get('Set-Cookie'),/HttpOnly; Secure; SameSite=Lax/);const page=await response.text();assert.ok(!page.includes('local-private-setup-ticket'));assert.ok(!JSON.stringify(await a.status()).includes('github_setup_session'));assert.equal((await ctx.storage.get('github_setup_session')).hash.length,64);
+});
+
+
+test('watchdog arms a durable alarm independently of cron and stops after success',async t=>{
+ const original=globalThis.fetch;t.after(()=>globalThis.fetch=original);const ctx=context(),w=new Watchdog(ctx,{WATCHDOG_TOKEN:'test'}),b=window();await w.fetch(request(b));assert.ok(ctx.map.get('alarm')>Date.now());w.current=async()=>b.target_version;globalThis.fetch=async url=>Response.json(url.includes('/v1/status')?{control_release_id:b.release_id,ledger_head:b.checkpoint}:{events:[]});await w.alarm();assert.equal((await ctx.storage.get('window')).status,'checking');ctx.map.delete('alarm');await w.alarm();assert.equal((await ctx.storage.get('window')).status,'healthy');assert.equal(ctx.map.has('alarm'),false);
 });
