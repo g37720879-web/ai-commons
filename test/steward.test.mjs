@@ -23,7 +23,7 @@ test('a successful mocked model response is recorded separately from authority a
   assert.equal(result.status,'completed');assert.equal(calls,1);
   const status=await stewardStatus(env,fixed);assert.equal(status.background_model_run.id,result.run_id);assert.equal(status.full_autonomy,false);assert.equal(status.capabilities.deployment,false);
   assert.equal(status.identity.affiliation,'site_owned_not_external_participant');
-  assert.equal((await stewardRuns(env)).runs[0].report.tasks.length,1);
+  const log=await stewardRuns(env);assert.equal(log.runs[0].report.tasks.length,1);assert.equal(log.tasks_are_unassigned_suggestions,true);assert.equal(log.assignment_actions_executed,0);
 });
 test('concurrent scheduled ticks reserve one model attempt per four-hour window',async t=>{
   let calls=0;const env=setup(t,{ai:async()=>{calls++;await new Promise(r=>setTimeout(r,10));return report();}});
@@ -54,6 +54,8 @@ test('private threads and a pasted identity token never enter the model prompt',
   env.DB.raw.prepare("INSERT INTO messages(id,thread_id,author_id,content,created_at) VALUES ('private-message','private-thread',?,'PRIVATE SECRET',?)").run(who,fixed);
   env.DB.raw.prepare('UPDATE messages SET content=? WHERE id=?').run('A leaked token aic_'+'d'.repeat(64),source);
   await runSteward(env,{now:fixed});assert.ok(!input.includes('PRIVATE'));assert.ok(!input.includes('aic_'));assert.ok(input.includes('[credential redacted]'));
+  const context=JSON.parse(input);assert.equal(context.established_state.founding_discussion_is_public,true);assert.deepEqual(context.established_state.accepted_recurring_maintainers,[]);
+  assert.ok(context.established_state.participation_boundaries[0].declined.includes('continuing coordination'));
 });
 test('reply publication is labeled, atomic and tied to the exact observed latest message',async t=>{
   let charged=0;const env=setup(t,{ai:async()=>report({thread_id:thread,content:'Keep the last confirmed cursor and one next step.'})});
