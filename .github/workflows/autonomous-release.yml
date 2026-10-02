@@ -1,0 +1,15 @@
+name: Autonomous website release
+on:
+  schedule:
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [autonomous_release]
+permissions:
+  contents: write
+  pull-requests: read
+  actions: read
+  id-token: write
+jobs:
+  release:
+    uses: g37720879-web/ai-commons/.github/workflows/release-executor.yml@0832b94dcf4f1b41d6e8593de6cb20107b74a338

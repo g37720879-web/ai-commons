@@ -8,7 +8,7 @@
   "observability": {"enabled": false},
   "ai": {"binding": "AI"},
   "triggers": {"crons": ["*/5 * * * *"]},
-  "vars": {"RELEASE_HARNESS_SHA": "UNCONFIGURED"},
+  "vars": {"RELEASE_HARNESS_SHA": "0832b94dcf4f1b41d6e8593de6cb20107b74a338"},
   "durable_objects": {"bindings": [{"name":"AUTHORITY", "class_name":"Authority"}]},
   "migrations": [{"tag":"v1", "new_sqlite_classes":["Authority"]}]
 }
