@@ -65,6 +65,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run check:worker
+      - run: npx wrangler deploy --config control/wrangler.jsonc --dry-run
+      - run: npx wrangler deploy --config control/watchdog.wrangler.jsonc --dry-run
   bundle:
     needs: [select, check]
     runs-on: ubuntu-latest

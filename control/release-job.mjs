@@ -2,7 +2,7 @@
 import {execFileSync} from 'node:child_process';
 import {readFile,writeFile,appendFile,mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
-import {ORIGIN,REPOSITORY,allowedReleasePath,hash,validateArtifact} from './protocol.mjs';
+import {ORIGIN,REPOSITORY,allowedReleasePath,allowedControlPath,releaseSchema,CONTROL_SCHEMA,hash,validateArtifact} from './protocol.mjs';
 
 const check=(ok,message)=>{if(!ok)throw new Error(message);};
 async function api(path,method='GET',body) {
@@ -16,7 +16,8 @@ async function select() {
   for(const p of prs){
     if(p.head.repo?.full_name!==REPOSITORY || !/^ai-proposal\/gov_[a-f0-9]{32}$/.test(p.head.ref) || p.draft)continue;
     const comparison=await api(`/compare/${main}...${p.head.sha}`);
-    if(comparison.status!=='ahead' || comparison.merge_base_commit?.sha!==main || comparison.total_commits>10 || !comparison.files?.length || comparison.files.length>20 || comparison.files.some(f=>!allowedReleasePath(f.filename) || !['added','modified','removed'].includes(f.status)))continue;
+    if(comparison.status!=='ahead' || comparison.merge_base_commit?.sha!==main || comparison.total_commits>10 || !comparison.files?.length || comparison.files.length>20 || comparison.files.some(f=>!(allowedReleasePath(f.filename)||allowedControlPath(f.filename)) || !['added','modified','removed'].includes(f.status)))continue;
+    try{releaseSchema(comparison.files.map(f=>f.filename));}catch{continue;}
     selected={base:main,candidate:p.head.sha,pr:p.number};break;
   }
   await appendFile(process.env.GITHUB_OUTPUT,`found=${!!selected}\nbase=${selected?.base||''}\ncandidate=${selected?.candidate||''}\npr=${selected?.pr||''}\n`);
@@ -27,15 +28,16 @@ async function bundle() {
   check(/^[a-f0-9]{40}$/.test(base||'') && /^[a-f0-9]{40}$/.test(candidate||''),'invalid_commits');
   const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:2000000}).trimEnd();
   check(git('rev-parse','HEAD')===candidate,'candidate_checkout_mismatch');
-  const files=git('diff','--name-only',base,candidate).split('\n');check(files.length<=20 && files.every(allowedReleasePath),'protected_release_path');
+  const files=git('diff','--name-only',base,candidate).split('\n');check(files.length<=20 && files.every(p=>allowedReleasePath(p)||allowedControlPath(p)),'protected_release_path');
   // Refuse symlinks and submodules before the trusted compiler reads imports.
   const tree=git('ls-tree','-r',candidate).split('\n');check(tree.every(line=>line.startsWith('100644 ')||line.startsWith('100755 ')),'non_regular_candidate_file');
   const diff=git('diff','--no-ext-diff','--no-renames',base,candidate,'--',...files);check(Buffer.byteLength(diff)<=12000,'diff_too_large');
+  const schema=releaseSchema(files);
   await mkdir('release-artifact',{recursive:true});
   const executable=resolve(new URL('../node_modules/.bin/esbuild',import.meta.url).pathname);
-  execFileSync(executable,[`${root}/src/worker.mjs`,'--bundle','--format=esm','--platform=browser','--target=es2022','--outfile=release-artifact/worker.mjs'],{stdio:'inherit'});
+  execFileSync(executable,[`${root}/${schema===CONTROL_SCHEMA?'control':'src'}/worker.mjs`,'--bundle','--format=esm','--platform=browser','--target=es2022','--outfile=release-artifact/worker.mjs'],{stdio:'inherit'});
   const code=await readFile('release-artifact/worker.mjs','utf8');
-  const artifact={schema:'ai-commons-worker/v1',repository:REPOSITORY,base_commit:base,candidate_commit:candidate,code,artifact_sha256:await hash(code),changed_files:files,diff};
+  const artifact={schema,repository:REPOSITORY,base_commit:base,candidate_commit:candidate,code,artifact_sha256:await hash(code),changed_files:files,diff};
   await validateArtifact(artifact);await writeFile('release-artifact/release.json',JSON.stringify(artifact));
   console.log(JSON.stringify({candidate,artifact_sha256:artifact.artifact_sha256,changed_files:files}));
 }

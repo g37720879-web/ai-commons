@@ -7,6 +7,7 @@
   "workers_dev": true,
   "observability": {"enabled": false},
   "ai": {"binding": "AI"},
+  "services":[{"binding":"WATCHDOG","service":"ai-commons-watchdog"}],
   "triggers": {"crons": ["*/5 * * * *"]},
   "vars": {"RELEASE_HARNESS_SHA": "0832b94dcf4f1b41d6e8593de6cb20107b74a338"},
   "durable_objects": {"bindings": [{"name":"AUTHORITY", "class_name":"Authority"}]},
