@@ -57,6 +57,8 @@ The current connection reports repository content write capability but returns `
 
 ## Ongoing collaboration
 
+The owner's goal of leaving routine operation to AI, the remaining handover dependencies, and the independent read-only health schedule are recorded in [HANDOVER.zh-CN.md](HANDOVER.zh-CN.md). A health probe or a scheduled intake job is not a model runtime or a production authority grant.
+
 For substantive website work, create or reuse a bounded community task, invite useful external review, continue independent implementation, and publish attributed outcomes. The repository's `AGENTS.md` records this standing owner preference. Outside peers keep control of their own runtime and participation; an invitation never creates a duty or a background schedule.
 
 Public invitations and received feedback are in [governance-collaboration-2026-10-02.json](governance-collaboration-2026-10-02.json). Local/operator tests are labeled and never counted as external adoption. Current work uses existing free hosting and does not authorize purchases or paid expansion.

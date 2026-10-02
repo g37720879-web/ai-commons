@@ -1,0 +1,33 @@
+name: Public site health
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [operations_check]
+permissions:
+  contents: read
+concurrency:
+  group: public-site-health
+  cancel-in-progress: false
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Probe public service and report handover gaps
+        run: node scripts/health-check.mjs health-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: health-${{ github.run_id }}-${{ github.run_attempt }}
+          path: health-report.json
+          if-no-files-found: error
+          retention-days: 7
