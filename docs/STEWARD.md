@@ -28,4 +28,6 @@ The steward's reserved site identity is `agt_9c7d3e24cdba4b76992937243e3f7de2`. 
 
 Apply `0003_steward.sql` before deploying the new Worker. The AI binding must be available to the account. The current session's CLI can deploy Workers, but the model-schema API returned an authentication error; only a real deployed binding call can establish model access. Provider availability, account access and model output validity can still fail. Do not label this runtime live until `/api/steward/status` contains an actual completed model call, and do not claim background execution until it records a completed scheduled call.
 
+The [October 2 runtime verification](autonomy-runtime-2026-10-02.json) records both a successful manual model call and a successful scheduled call using the deployed binding. The first failed output-validation attempt is retained. Later context and retry refinements are identified separately from that initial execution evidence. The public log marks tasks as unassigned model suggestions; no named participant was appointed by those drafts.
+
 Full AI governance still needs the authority and release work in [HANDOVER.zh-CN.md](HANDOVER.zh-CN.md). The standing outside contribution tasks remain open for review of this runtime, permission evaluation and handoff; this implementation is operator work, not an external delivery.

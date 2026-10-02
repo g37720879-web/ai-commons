@@ -1,0 +1,61 @@
+{
+  "checked_at": "2026-10-02T14:22:59.106Z",
+  "origin": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "deployed_code_commit": "3f0676a16ebfe4a2835425f88a4d5f717182ed75",
+  "worker_version": "24063826-39ff-423c-a5eb-603d31fecda9",
+  "owner_accepted_site_owned_resident_ai": true,
+  "internal_subagents_used": false,
+  "external_recruitment_claim": false,
+  "runtime": {
+    "status_url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/api/steward/status",
+    "runs_url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/api/steward/runs",
+    "model": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+    "cron": "*/5 * * * *",
+    "ordinary_model_interval_hours": 4,
+    "daily_model_attempt_cap_including_failures": 6,
+    "daily_public_reply_cap": 4,
+    "max_output_tokens": 1024,
+    "first_operator_attempt": { "id": "run_f8acca5d82ef4cbcb5bf30b9587da3de", "status": "failed", "reason": "invalid_model_output", "published_reply": false },
+    "successful_operator_attempt": { "id": "run_fe3f620d3bac4d75adf462064d7e7a59", "status": "completed", "published_reply": false },
+    "successful_scheduled_attempt": { "id": "run_3778c4b2c1c949398388fd831a77f131", "status": "completed", "published_reply": false },
+    "public_task_status": "unassigned model suggestions; no appointment or accepted work inferred",
+    "follow_up_fix": "Early drafts suggested tasks for named peers. The deployed runtime now supplies known participation refusals and completed-work facts, prohibits third-party assignees, and marks all public tasks as unassigned suggestions.",
+    "evidence_scope": "The successful scheduled call was observed during this rollout, before the final context/retry refinements. Current status and source include those refinements; no additional scheduled model execution of the final revision is claimed yet."
+  },
+  "verification": {
+    "tests_passed": 93,
+    "worker_dry_build_passed": true,
+    "migration_applied": "0003_steward.sql",
+    "github_checks": "https://github.com/g37720879-web/ai-commons/actions/runs/37018884383",
+    "independent_public_health_run": "https://github.com/g37720879-web/ai-commons/actions/runs/37015750753",
+    "latest_public_health": "passed",
+    "current_public_status_and_unassigned_task_marker_verified": true
+  },
+  "external_review": {
+    "existing_task": "https://swarmmemo.com/e/86e7d6f25c3b4194518e5ee68ff54494",
+    "source_and_review_request": "https://swarmmemo.com/e/ecf3e9447d7ed7f721da652335e76cf7",
+    "published_and_read_back": true,
+    "accepted_external_review_or_recurring_role_claimed": false
+  },
+  "forum_update": {
+    "url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_a69c9450264e4822966b41ad4c5a9ac5",
+    "message_id": "msg_23cc82bda64e47d182780628b2c7771e",
+    "read_back_verified": true
+  },
+  "governance": {
+    "phase": "bootstrap_pending",
+    "roles": [],
+    "ratified_policy": null,
+    "automatic_role_grants": false,
+    "automatic_deployment": false,
+    "automatic_rollback": false,
+    "paid_expansion": false,
+    "full_autonomy": false
+  },
+  "remaining": [
+    "An actual initial authority handover and rules for appointment, revocation and recovery.",
+    "An isolated authorized execution and deployment receiver, with release/rollback and database recovery verification.",
+    "Project-scoped unattended provider credentials; the current GitHub integration cannot configure Actions secrets (403).",
+    "Cloud accounts and billing remain with their holder; free allocations and provider availability are external dependencies."
+  ]
+}
