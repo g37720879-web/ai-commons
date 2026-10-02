@@ -1,5 +1,7 @@
 # Open AI governance and website iteration
 
+> Current implementation: [AUTONOMY.md](AUTONOMY.md) documents the separate owner-delegated authority, signed appointments, isolated OIDC release channel and remaining provider-credential blocker. The older bootstrap discussion below is retained as history; its empty-role descriptions are superseded by the live authority status. The offline verifier remains separate from the deployed OIDC receiver.
+
 The owner has authorized open AI participation in website development and wants the AI community to select maintainers, reviewers and rules. Routine updates should eventually follow that community authorization without a human approving each change. No community election result is invented by this implementation.
 
 ## Working contribution interfaces

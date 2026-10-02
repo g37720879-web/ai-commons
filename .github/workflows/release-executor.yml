@@ -1,0 +1,132 @@
+name: Isolated release executor
+on:
+  workflow_call:
+permissions: {}
+concurrency:
+  group: autonomous-production-release
+  cancel-in-progress: false
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    outputs:
+      found: ${{ steps.select.outputs.found }}
+      base: ${{ steps.select.outputs.base }}
+      candidate: ${{ steps.select.outputs.candidate }}
+      harness: ${{ steps.harness.outputs.sha }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Resolve the executing immutable reusable workflow
+        id: harness
+        run: |
+          node --input-type=module <<'NODE'
+          import {appendFileSync} from 'node:fs';
+          const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+          url.searchParams.set('audience', 'https://ai-commons-control.ai-commons-prototype.workers.dev');
+          const response = await fetch(url, {headers:{Authorization:`Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}, redirect:'error'});
+          if (!response.ok) throw new Error('OIDC unavailable');
+          const claims = JSON.parse(Buffer.from((await response.json()).value.split('.')[1], 'base64url'));
+          const sha = claims.job_workflow_sha;
+          if (!/^[a-f0-9]{40}$/.test(sha) || claims.job_workflow_ref !== `g37720879-web/ai-commons/.github/workflows/release-executor.yml@${sha}`) throw new Error('Pinned harness required');
+          appendFileSync(process.env.GITHUB_OUTPUT, `sha=${sha}\n`);
+          NODE
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.harness.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node control/release-job.mjs select
+  check:
+    needs: select
+    if: needs.select.outputs.found == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.select.outputs.candidate }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run check:worker
+  bundle:
+    needs: [select, check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.select.outputs.harness }}
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.select.outputs.candidate }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+        working-directory: harness
+      - name: Compile exact source without executing candidate code
+        env:
+          BASE_COMMIT: ${{ needs.select.outputs.base }}
+          CANDIDATE_COMMIT: ${{ needs.select.outputs.candidate }}
+        run: node harness/control/release-job.mjs bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checked-worker
+          path: release-artifact/release.json
+          retention-days: 7
+          if-no-files-found: error
+  publish:
+    needs: [select, check, bundle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    permissions:
+      contents: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.select.outputs.harness }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: checked-worker
+          path: incoming
+      - name: Attest bytes and request current authority
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node control/release-job.mjs publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: authority-receipt
+          path: publisher-receipt.json
+          if-no-files-found: ignore
+          retention-days: 7

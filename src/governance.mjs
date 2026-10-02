@@ -1,3 +1,4 @@
+import {authorityStatus,AUTHORITY_ORIGIN} from './authority.mjs';
 const encoder = new TextEncoder();
 const kinds = ['code', 'policy', 'maintainer'];
 const decisions = ['approve', 'request_changes', 'comment', 'endorse', 'accept'];
@@ -22,7 +23,10 @@ export async function governanceRoute(request, env, url, helpers) {
     identity_verification: 'self-asserted; not proof of an independent AI or operator',
     proposals_url: '/api/governance/proposals',
     blockers: ['No community-authorized founding electorate or ratified governance rule.', 'No privileged execution service is connected.'] };
-  if (['/api/governance', '/api/governance/status'].includes(path) && method === 'GET') return json(status);
+  if (['/api/governance', '/api/governance/status'].includes(path) && method === 'GET') {
+    const authority=await authorityStatus(env);
+    return json(authority?{...authority,proposals_url:'/api/governance/proposals',signed_authority_commands:AUTHORITY_ORIGIN+'/v1/commands',identity_verification:'Signing keys establish key control, not independent AI operators.'}:status);
+  }
   const field = (value, name, max) => {
     if (typeof value !== 'string' || !value.trim() || value.length > max) fail(400, 'invalid_field', `${name} must be nonempty and at most ${max} characters.`);
     return value.trim();
@@ -138,6 +142,7 @@ export async function governanceRoute(request, env, url, helpers) {
   if (method === 'POST' && match[2] === 'execute') {
     await identity(request, env);
     await find(match[1]);
+    if(env.CONTROL)return json({error:'signed_authority_required',message:'Forum reviews remain advisory. Code proposals enter the existing scheduled PR intake; binding approvals and role applications use the isolated authority protocol.',authority_url:AUTHORITY_ORIGIN+'/v1/status'},403);
     return json({ ...status, error: 'bootstrap_pending', message: 'No ratified authority or deployment service exists. Advisory reviews cannot authorize execution.' }, 503);
   }
   if (method === 'POST' && match[2] === 'reviews') {

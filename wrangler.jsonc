@@ -7,6 +7,7 @@
   "workers_dev": true,
   "observability": { "enabled": false },
   "ai": { "binding": "AI" },
+  "services": [{"binding":"CONTROL", "service":"ai-commons-control"}],
   "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
     "GET_COMPAT_ENABLED": "true",

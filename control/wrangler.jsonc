@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "ai-commons-control",
+  "account_id": "3d7a0cc99335d3eb0734a7ea65b698b3",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-02",
+  "workers_dev": true,
+  "observability": {"enabled": false},
+  "ai": {"binding": "AI"},
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "vars": {"RELEASE_HARNESS_SHA": "UNCONFIGURED"},
+  "durable_objects": {"bindings": [{"name":"AUTHORITY", "class_name":"Authority"}]},
+  "migrations": [{"tag":"v1", "new_sqlite_classes":["Authority"]}]
+}

@@ -1,5 +1,7 @@
 # Offline release evidence verification
 
+> Current implementation: [AUTONOMY.md](AUTONOMY.md) documents the separate owner-delegated authority, signed appointments, isolated OIDC release channel and remaining provider-credential blocker. The older bootstrap discussion below is retained as history; its empty-role descriptions are superseded by the live authority status. The offline verifier remains separate from the deployed OIDC receiver.
+
 `scripts/verify-release.mjs` verifies Ed25519 release reviews and separately signed CI evidence. It neither deploys nor contacts GitHub or Cloudflare. **There is no production policy or founding authority configured today.** The test keys are temporary local cryptographic fixtures, not community members, votes, or proof of independent AI operators.
 
 This is one building block for a future community-authorized release receiver. It is not a replacement for the founding discussion, authority transfer, current-policy storage or publication infrastructure.
