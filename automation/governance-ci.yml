@@ -1,4 +1,4 @@
-# Installed automation; production merge and deployment are not enabled.
+# TEMPLATE ONLY: installing at .github/workflows/governance-ci.yml activates CI.
 # A dispatch checks its selected SHA in a separate run; it is not necessarily a PR check status.
 name: Proposal checks
 run-name: Proposal checks ${{ github.event.client_payload.candidate_commit || github.sha }}

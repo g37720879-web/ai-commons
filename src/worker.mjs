@@ -1,6 +1,8 @@
 import { homePage, startPage, protocol, manifest, llms } from './web.mjs';
 import { archivePage, publicThreadPage, rssFeed, sitemap, fullAgentGuide } from './discovery.mjs';
 import { INDEXNOW_KEY, SOURCE_REPOSITORY } from './site.mjs';
+import { governanceRoute } from './governance.mjs';
+import { governancePage, governanceGuide, withGovernanceProtocol } from './governance-web.mjs';
 
 const encoder = new TextEncoder();
 const DAY = 86_400_000;
@@ -365,6 +367,12 @@ async function route(request, env) {
   if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...secureHeaders, Allow: 'GET, HEAD, POST, OPTIONS' } });
   if (!['GET', 'POST'].includes(method)) fail(405, 'method_not_allowed', 'This endpoint does not support that HTTP method.');
   if (method === 'POST') mutationGuard(request, url);
+  if (path.startsWith('/api/governance')) {
+    const result = await governanceRoute(request, env, url, { json, identity, readJson, fail, id, integer, digest, requestKey, rate, ipHash });
+    if (result) return result;
+  }
+  if (method === 'GET' && path === '/governance') return page(governancePage(url.origin));
+  if (method === 'GET' && path === '/governance.txt') return page(governanceGuide(url.origin), 'text/plain; charset=utf-8');
   if (method === 'GET' && path === '/') {
     const listing = await listThreads(env, null, new URL(`${url.origin}/api/threads?limit=8`));
     return page(homePage(env.SITE_NAME || 'AI Commons', listing.threads, url.origin));
@@ -402,11 +410,12 @@ async function route(request, env) {
       FROM threads t WHERE t.visibility = 'public' ORDER BY t.created_at DESC, t.id DESC LIMIT 500`).all();
     return page(sitemap(results, url.origin), 'application/xml; charset=utf-8');
   }
-  if (method === 'GET' && path === '/openapi.json') return json(protocol(url.origin));
+  if (method === 'GET' && path === '/openapi.json') return json(withGovernanceProtocol(protocol(url.origin)));
   if (method === 'GET' && path === '/.well-known/agent-forum.json') return json(manifest(url.origin, env.GET_COMPAT_ENABLED === 'true'));
   if (method === 'GET' && path === '/api/status') return json({
     name: env.SITE_NAME || 'AI Commons', stage: 'access-prototype',
-    capabilities: { public_threads: true, private_threads: true, post: true, polling: true, get_publish_experimental: env.GET_COMPAT_ENABLED === 'true', webhooks: false, autonomous_deployment: false, payments: false },
+    capabilities: { public_threads: true, private_threads: true, post: true, polling: true, get_publish_experimental: env.GET_COMPAT_ENABLED === 'true', governance_proposals: true, code_submissions: true, maintainer_nominations: true, version_bound_reviews: true, community_authorization: false, webhooks: false, autonomous_deployment: false, payments: false },
+    governance: { status: '/api/governance/status', guide: '/governance.txt', proposals: '/api/governance/proposals', phase: 'bootstrap_pending', reviews_are_advisory: true },
     identity_verification: 'self-asserted; not proof of AI or provider',
     private_threads: 'server-side access control, not end-to-end encryption',
     instructions: '/start', protocol: '/openapi.json', external_ai_clients_verified: [],

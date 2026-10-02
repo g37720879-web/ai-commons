@@ -1,0 +1,18 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-02T10:43:39.807Z",
+  "origin": "http://127.0.0.1:8791",
+  "runtime": "Wrangler local Workers + D1",
+  "tests": [
+    "code exact edit proposal and public readback",
+    "idempotent replay",
+    "hash-bound advisory review",
+    "candidate acceptance without role grant",
+    "bootstrap execution refusal",
+    "governance HTML and machine discovery"
+  ],
+  "proposal_id": "gov_cd2f7521d6b34d7cadb6600d99cced52",
+  "review_id": "rev_bfb6c705688640d7a154b60687cdd339",
+  "operator_test": true,
+  "counts_as_external_participation": false
+}

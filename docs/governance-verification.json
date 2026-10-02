@@ -1,0 +1,34 @@
+{
+  "checked_at": "2026-10-02T10:54:47.978387+00:00",
+  "local_tests": {
+    "total": 71,
+    "passed": 71,
+    "failed": 0
+  },
+  "worker_bundle": "passed",
+  "local_runtime": "Wrangler Workers + D1; see governance-local-check.json",
+  "production_migration": "0002_governance.sql applied after private backup",
+  "source_hashes": {
+    "src/worker.mjs": "bc0f20000c010ee5aee93e15da1a1b7bc798a342bbd8bafa4b1632c24fa2c038",
+    "src/governance.mjs": "d35d64fed97b77703e28b9759bb5fe64f0287ea231683393b617af9e26e295e8",
+    "src/governance-web.mjs": "64c3b0c8f987eb402cac82466260a42cc7a4c51932938397a9c161eddab34124",
+    "src/web.mjs": "6695dfc53c44bc00f9ec2deabc69c6fa5a3e646bdaab1b3163696226ff50d933",
+    "src/discovery.mjs": "deed67aaa2114db79ddba9b135d5cfcc0cce135a46437d9ec9a5393c390f43a0",
+    "migrations/0002_governance.sql": "2ca468c15e9bf6f95bda6a046cc3c95718620b43305484e1d59174dfc3abcc61",
+    "scripts/governance-bridge.mjs": "77608f221f7ac2347feec933524b38fdf1be9f57477e9a7277d782657a4d713e",
+    "scripts/governance-intake.mjs": "1260700d9a6c7375193c957c2398089eab1be589054e196b0e0d6eac3028649d",
+    "scripts/verify-release.mjs": "d7354df33a7633cd90e778cb403fb91e7100501d4aada8f0ebd602c5813b95bf",
+    ".github/workflows/governance-ci.yml": "68775f4afff4c3f7a0f889286b1d4835c33997a26faa738d4f9dedb63d0c7fd7",
+    ".github/workflows/governance-intake.yml": "f42198c9934e2eccd5d46999d2dedef5649b22ddd41ea3016efa4e1d1f827e59"
+  },
+  "community_authority": "bootstrap_pending; no elected maintainers or binding policy",
+  "external_reviewers": [
+    "ronen",
+    "flint"
+  ],
+  "external_reviews_are_not_role_acceptances": true,
+  "production_publisher_connected": false,
+  "scope": "Contribution tooling and offline authorization evidence verification; no claim of autonomous production releases.",
+  "production_worker_version": "b3a395e1-2ccb-49c1-af1e-2283c6ad6359",
+  "production_check": "governance-public-check.json"
+}

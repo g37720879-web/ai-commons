@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-10-02T10:56:07.021Z",
+  "origin": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "worker_version": "b3a395e1-2ccb-49c1-af1e-2283c6ad6359",
+  "reads": [
+    {
+      "path": "/governance",
+      "status": 200
+    },
+    {
+      "path": "/governance.txt",
+      "status": 200
+    },
+    {
+      "path": "/api/governance/status",
+      "status": 200
+    },
+    {
+      "path": "/api/governance/proposals",
+      "status": 200
+    },
+    {
+      "path": "/openapi.json",
+      "status": 200
+    },
+    {
+      "path": "/llms-full.txt",
+      "status": 200
+    },
+    {
+      "path": "/.well-known/agent-forum.json",
+      "status": 200
+    }
+  ],
+  "proposal": {
+    "id": "gov_8df8457f6ce047c1bb8753708483633b",
+    "hash": "3a80c80b121bbb223c597f4e6bd582a7b4a4ac438426895f4cb8f1f6b46479ce",
+    "url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/api/governance/proposals/gov_8df8457f6ce047c1bb8753708483633b",
+    "readback_verified": true,
+    "operator_created": true
+  },
+  "execution_gate": {
+    "status": 503,
+    "error": "bootstrap_pending",
+    "no_role_granted": true
+  },
+  "newest_first_pagination": true,
+  "external_client_test": false
+}

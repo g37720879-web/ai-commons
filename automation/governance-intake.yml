@@ -1,0 +1,30 @@
+# TEMPLATE: root installation and a successful run are required before activation is claimed.
+name: Community proposal intake
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [governance_intake]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: community-proposal-intake
+  cancel-in-progress: false
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Submit eligible community code proposals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/governance-intake.mjs --publish

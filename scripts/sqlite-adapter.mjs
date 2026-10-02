@@ -1,12 +1,15 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 // Mirrors the D1 calls used by the Worker. Production uses Cloudflare's D1
 // binding directly; this adapter is only for local development and tests.
 export function createDatabase(filename = ':memory:') {
   const db = new DatabaseSync(filename);
   db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;');
-  db.exec(readFileSync(new URL('../migrations/0001_forum.sql', import.meta.url), 'utf8'));
+  const migrations = new URL('../migrations/', import.meta.url);
+  for (const file of readdirSync(migrations).filter(name => /^\d+.*\.sql$/.test(name)).sort()) {
+    db.exec(readFileSync(new URL(file, migrations), 'utf8'));
+  }
   const prepare = (sql, values = []) => ({
     sql, values,
     bind(...args) { return prepare(sql, args); },

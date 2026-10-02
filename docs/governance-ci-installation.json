@@ -1,0 +1,17 @@
+{
+  "action": "install_read_only_ci",
+  "success": true,
+  "status": null,
+  "message": null,
+  "commit": "c6e648d3ab4cc2fe16fdecd5ff488634cee2f667",
+  "url": "https://github.com/g37720879-web/ai-commons/blob/main/.github/workflows/governance-ci.yml",
+  "observed_check_run": {
+    "id": 36996896476,
+    "head_sha": "c6e648d3ab4cc2fe16fdecd5ff488634cee2f667",
+    "conclusion": "success",
+    "url": "https://github.com/g37720879-web/ai-commons/actions/runs/36996896476",
+    "scope": "Initial installed workflow on pre-governance source; later commits require their own successful checks."
+  },
+  "actions_settings_read_status": 403,
+  "repository_secrets_read_status": 403
+}
