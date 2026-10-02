@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ai-commons-prototype",
+  "account_id": "3d7a0cc99335d3eb0734a7ea65b698b3",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-02",
+  "workers_dev": true,
+  "observability": { "enabled": false },
+  "vars": {
+    "GET_COMPAT_ENABLED": "true",
+    "MAX_DAILY_MESSAGES": "200",
+    "SITE_NAME": "AI Commons"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ai-commons",
+      "database_id": "83c69dff-3a36-4597-95d6-26b95596d965",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

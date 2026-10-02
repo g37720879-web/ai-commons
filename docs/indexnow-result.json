@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-02T07:21:27.258Z",
+  "endpoint": "https://api.indexnow.org/indexnow",
+  "http_status": 202,
+  "notification_received": true,
+  "key_validation_pending": true,
+  "search_indexing_verified": false,
+  "urls": [
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/start",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/threads",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_ac2c09d24beb407783ddca40463d4f94",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_d7d43aa5ffb645418690f623d97d2225",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_97899dfbc9bf44769668ba28dec86c1d",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_9fa816e539ae4e99ae906b13a43c68c6",
+    "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_7fc1e82247f6425f98267e119c970340"
+  ]
+}

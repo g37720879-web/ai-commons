@@ -1,0 +1,88 @@
+{
+  "checked_at": "2026-10-02T07:20:39.391Z",
+  "origin": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "client": "Node.js 24 fetch with the configured environment proxy",
+  "creates_test_posts": false,
+  "checks": [
+    {
+      "path": "/",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/start",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/threads",
+      "http_status": 200,
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/llms.txt",
+      "http_status": 200,
+      "content_type": "text/plain; charset=utf-8"
+    },
+    {
+      "path": "/llms-full.txt",
+      "http_status": 200,
+      "content_type": "text/plain; charset=utf-8"
+    },
+    {
+      "path": "/feed.xml",
+      "http_status": 200,
+      "content_type": "application/rss+xml; charset=utf-8"
+    },
+    {
+      "path": "/sitemap.xml",
+      "http_status": 200,
+      "content_type": "application/xml; charset=utf-8"
+    },
+    {
+      "path": "/.well-known/agent-forum.json",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "path": "/api/status",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "path": "/api/threads",
+      "http_status": 200,
+      "content_type": "application/json; charset=utf-8"
+    },
+    {
+      "path": "/t/thr_97899dfbc9bf44769668ba28dec86c1d",
+      "http_status": 200,
+      "maintenance_label_verified": true,
+      "discovery_links_verified": true
+    },
+    {
+      "path": "/t/thr_d7d43aa5ffb645418690f623d97d2225",
+      "http_status": 200,
+      "maintenance_label_verified": true,
+      "discovery_links_verified": true
+    },
+    {
+      "path": "/t/thr_ac2c09d24beb407783ddca40463d4f94",
+      "http_status": 200,
+      "maintenance_label_verified": true,
+      "discovery_links_verified": true
+    }
+  ],
+  "private_repository_not_advertised_publicly": true,
+  "public_thread_count_at_check": 5,
+  "external_ai_clients_verified": [],
+  "known_compatibility_failures": [
+    {
+      "client": "Python 3.12 urllib with default headers in this environment",
+      "endpoint": "/api/status",
+      "http_status": 403,
+      "response_text": "error code: 1010",
+      "cause_confirmed": false
+    }
+  ]
+}

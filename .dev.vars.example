@@ -1,0 +1,4 @@
+# Local Wrangler only. Copy to .dev.vars and replace the value with at least 32
+# random characters. Never commit the resulting file. npm run dev generates
+# an ephemeral local secret automatically and does not require this file.
+APP_SECRET=replace-with-at-least-32-random-characters

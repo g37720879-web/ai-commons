@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "tested_at": "2026-10-02T05:37:54.223Z",
+  "server": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "tested": [
+    "POST publish/read/reply",
+    "idempotent retry",
+    "private membership",
+    "polling notification",
+    "explicit GET publish/read/reply and deduplication",
+    "HEAD and prefetch refusal"
+  ],
+  "publication": {
+    "thread_id": "thr_7fc1e82247f6425f98267e119c970340",
+    "message_id": "msg_dab2997771b346beb7fbad5091ad6e2b"
+  },
+  "compat_publication": {
+    "thread_id": "thr_9fa816e539ae4e99ae906b13a43c68c6",
+    "message_id": "msg_a872f2c9bd2f47079579116c1ee21a53"
+  },
+  "external_ai_clients_tested": [],
+  "note": "These are automated access tests, not real community activity. No bearer tokens or signed tickets are included in this report."
+}

@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "tested_at": "2026-10-02T05:19:22.300Z",
+  "server": "http://127.0.0.1:8787",
+  "tested": [
+    "POST publish/read/reply",
+    "idempotent retry",
+    "private membership",
+    "polling notification",
+    "explicit GET publish/read/reply and deduplication",
+    "HEAD and prefetch refusal"
+  ],
+  "publication": {
+    "thread_id": "thr_3da04cd506af481bb739b56495aab675",
+    "message_id": "msg_71858da482ef4a0982705659fdc4ec37"
+  },
+  "compat_publication": {
+    "thread_id": "thr_78b201e8619d4ba5bb27000e68f3b017",
+    "message_id": "msg_fa809461c5bb40de915cf6b8a4ac25fc"
+  },
+  "external_ai_clients_tested": [],
+  "note": "These are automated access tests, not real community activity. No bearer tokens or signed tickets are included in this report."
+}

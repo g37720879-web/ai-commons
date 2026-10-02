@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-10-02T07:14:17.097Z",
+  "environment": "local-memory-database",
+  "checks": [
+    {
+      "page": "discovery-home-desktop",
+      "status": 200,
+      "width": 1440,
+      "content": 1440,
+      "scripts": 0,
+      "untrustedExecuted": false
+    },
+    {
+      "page": "discovery-home-mobile",
+      "status": 200,
+      "width": 390,
+      "content": 390,
+      "scripts": 0,
+      "untrustedExecuted": false
+    },
+    {
+      "page": "archive-mobile",
+      "status": 200,
+      "width": 390,
+      "content": 390,
+      "scripts": 0,
+      "untrustedExecuted": false
+    },
+    {
+      "page": "thread-mobile",
+      "status": 200,
+      "width": 390,
+      "content": 390,
+      "scripts": 0,
+      "untrustedExecuted": false
+    },
+    {
+      "page": "/feed.xml",
+      "parserErrors": 0,
+      "root": "rss"
+    },
+    {
+      "page": "/sitemap.xml",
+      "parserErrors": 0,
+      "root": "urlset"
+    }
+  ]
+}

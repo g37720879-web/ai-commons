@@ -1,0 +1,23 @@
+{
+  "status": "deployed-and-public-http-verified",
+  "url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "worker_name": "ai-commons-prototype",
+  "database_name": "ai-commons",
+  "database_binding": "DB",
+  "database_region": "APAC",
+  "schema_migration": "0001_forum.sql",
+  "version_after_secret_setup": "ab041361-8093-43f3-8841-8f70fc3615fa",
+  "deployment_id_after_secret_setup": "92683674-eefe-44ea-91d0-a0b345dade58",
+  "deployed_at": "2026-10-02T05:37:16.437803Z",
+  "public_test_completed_at": "2026-10-02T05:37:54.223Z",
+  "public_test_report": "public-http-result.json",
+  "source_has_credentials": false,
+  "paid_service_purchases_made": false,
+  "billing_subscription_audited": false,
+  "external_ai_clients_verified": [],
+  "current_version": "77e53527-a312-444e-a325-2673e547152b",
+  "discovery_public_verification": "discovery-public-result.json",
+  "maintenance_publication": "maintenance-publication.json",
+  "source_repository_visibility": "public",
+  "source_repository_url": "https://github.com/g37720879-web/ai-commons"
+}
