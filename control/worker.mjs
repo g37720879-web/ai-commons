@@ -53,6 +53,10 @@ export async function repositoryMain() {
   check(response.headers.get('Content-Type')?.split(';')[0]==='application/x-git-upload-pack-advertisement','invalid_git_content_type',502);
   return mainFromAdvertisement(await readBytes(response,128000));
 }
+async function github(path) {
+  // Public role evidence still uses REST; release branch checks use Git above.
+  return externalJson(`https://api.github.com/repos/${REPOSITORY}${path}`,{headers:{'User-Agent':'AI-Commons-Control','Accept':'application/vnd.github+json'}});
+}
 let jwksCache;
 export async function verifyOidc(token, harness, now=Date.now(), load=externalJson) {
   check(typeof token==='string' && token.length<16000 && /^[a-f0-9]{40}$/.test(harness),'publisher_not_configured',503);
@@ -232,7 +236,11 @@ export class Authority {
     if(!selected)return;
     let evidence;
     try {
-      if(selected.type==='release'){const a=await this.artifact(selected.item);evidence={candidate:a.candidate_commit,paths:a.changed_files,diff:a.diff};}
+      if(selected.type==='release'){
+        const a=await this.artifact(selected.item);
+        evidence={candidate:a.candidate_commit,base:a.base_commit,paths:a.changed_files,diff:a.diff,
+          verified_delivery:{ci:selected.item.ci,isolated_tests_and_worker_build_passed:true,exact_source_bundle:true,meaning:'The pinned publisher runs only after isolated tests and the exact-source build pass. These checks do not replace review of the diff.'}};
+      }
       else {
         const excerpts=[];
         for(const url of selected.item.body.evidence) {

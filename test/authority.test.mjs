@@ -120,8 +120,19 @@ test('code reviews use code criteria without incorrectly requiring an applicant 
   a.artifact=async()=>({candidate_commit:'b'.repeat(40),changed_files:['docs/receipts.md'],diff:'+ Check the exact release receipt before claiming publication.'});
   a.env.AI={run:async(_model,request)=>{input=request;return {response:{decision:'defer',reason:'Mocked decision; this test verifies the review scope only.'}};}};
   await a.modelReview();const context=JSON.parse(input.messages[1].content);
+  assert.equal(context.evidence.verified_delivery.isolated_tests_and_worker_build_passed,true);
+  assert.match(context.evidence.verified_delivery.meaning,/do not replace review/);
   assert.equal(context.review_type,'release');assert.match(input.messages[0].content,/author need not hold an authority role/);assert.ok(!input.messages[0].content.includes('Defer governor applications'));
   assert.equal((await a.state()).releases[0].decision.decision,'defer');
+});
+test('role reviews can load fixed-repository GitHub evidence after Git branch verification changed',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+  const {a}=await setup(),app=await a.submitApplication(await application(await keys()));let input,reads=0;
+  globalThis.fetch=async url=>{assert.equal(String(url),'https://api.github.com/repos/g37720879-web/ai-commons/pulls/1');reads++;return Response.json({title:'Local evidence fixture',body:'Untrusted public work excerpt',state:'closed',merged:false});};
+  a.env.AI={run:async(_model,request)=>{input=request;return {response:{decision:'defer',reason:'Fixture is not sufficient evidence to grant a real role.'}};}};
+  await a.modelReview();const context=JSON.parse(input.messages[1].content);
+  assert.equal(reads,1);assert.equal(context.review_type,'application');assert.equal(context.evidence.evidence[0].title,'Local evidence fixture');
+  const s=await a.state();assert.equal(s.applications.find(x=>x.id===app.id).decision.decision,'defer');assert.equal(s.roles.length,3);
 });
 test('dynamic application limits fail closed and preserve an explicit pause',async()=>{
   let limit=0,fail=false;const binding={fetch:async()=>{if(fail)throw new Error();return Response.json({messages_per_day:limit});}};

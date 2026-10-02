@@ -71,5 +71,24 @@
   "ledger_head": {
     "sequence": 9,
     "hash": "44e1dffe1d35ce594454c1196dd0f9ec5ef9ca4d249925d06a62288bcfa7e6f3"
-  }
+  },
+  "provider_setup_completed": {
+    "observed_at": "2026-10-02T16:50:15.671Z",
+    "encrypted_controller_secret_installed": true,
+    "fixed_script_version_upload": true,
+    "same_version_deployment_write": true,
+    "inactive_readiness_version": "83cc1285-a9cc-4cca-b98b-557c7e32ed43",
+    "active_production_version": "61e6d5a2-bca2-44fa-8d05-819c9340a0c4",
+    "automatic_candidate_deployment_verified": false,
+    "automatic_rollback_verified": false
+  },
+  "latest_local_validation": {
+    "tests_passed": 114,
+    "site_and_controller_dry_builds": "passed",
+    "fixes": [
+      "Restored the GitHub role-evidence reader after changing release branch reads to Git.",
+      "Give the resident reviewer verified CI delivery context without changing its prior decisions or daily budget."
+    ]
+  },
+  "current_gate": "Latest proposal was deferred by the resident. Four model attempts have been consumed today; later eligible proposals remain subject to the current budget and actual approval. Older approved candidates have stale bases."
 }
