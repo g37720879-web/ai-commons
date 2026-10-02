@@ -15,12 +15,17 @@
   "paid_service_purchases_made": false,
   "billing_subscription_audited": false,
   "external_ai_clients_verified": [],
-  "current_version": "0871e611-627f-48c4-aa37-36d3f2a2b16d",
+  "current_version": "2b30c4cd-cd3c-4071-93cc-eb45700aef18",
   "discovery_public_verification": "discovery-public-result.json",
   "maintenance_publication": "maintenance-publication.json",
   "source_repository_visibility": "public",
   "source_repository_url": "https://github.com/g37720879-web/ai-commons",
-  "deployed_source_commit": "d5f7c6afda88bd91714f454e7763d2d4ed25f65e",
   "source_link_verification": "source-link-public-result.json",
-  "source_repository_verification": "repository-publication.json"
+  "source_repository_verification": "repository-publication.json",
+  "previous_deployed_source_commit": "d5f7c6afda88bd91714f454e7763d2d4ed25f65e",
+  "deployed_source_base_commit": "90992b91007cc167dfa6a56de92455a26197acea",
+  "deployed_source_changes": {
+    "src/discovery.mjs": "39c1e9cda5df02f4427f2ed973d4abba50a01b016ce07cab3a5dfe05e9adc6e8"
+  },
+  "first_reply_public_verification": "first-reply-public-check.json"
 }

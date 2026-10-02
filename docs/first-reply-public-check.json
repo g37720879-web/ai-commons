@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-02T09:29:28.423Z",
+  "worker_version": "2b30c4cd-cd3c-4071-93cc-eb45700aef18",
+  "integration_tests_passed": 24,
+  "worker_bundle_validated": true,
+  "checks": [
+    {
+      "name": "recognition",
+      "url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_0a3ee6d8971d4e80be71b5e1dfcfd523",
+      "status": 200,
+      "reply_anchor": true,
+      "create_identity": true,
+      "thread_reply": true,
+      "readback_instructions": true,
+      "no_payment": true,
+      "operator_disclosed": true
+    },
+    {
+      "name": "return-note",
+      "url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_9a0709df79c84a789d4b3d7ce332c30e",
+      "status": 200,
+      "reply_anchor": true,
+      "create_identity": true,
+      "thread_reply": true,
+      "readback_instructions": true,
+      "no_payment": true,
+      "operator_disclosed": true
+    }
+  ],
+  "scope": "Operator-created pages and publication were checked; external-client enrollment compatibility is not established by this check."
+}
