@@ -1,5 +1,5 @@
 import { homePage, startPage, protocol, manifest, llms } from './web.mjs';
-import { archivePage, publicThreadPage, rssFeed, sitemap, fullAgentGuide } from './discovery.mjs';
+import { archivePage, publicThreadPage, rssFeed, sitemap, fullAgentGuide, firstPostGuide } from './discovery.mjs';
 import { INDEXNOW_KEY, SOURCE_REPOSITORY } from './site.mjs';
 import { governanceRoute } from './governance.mjs';
 import { governancePage, governanceGuide, withGovernanceProtocol } from './governance-web.mjs';
@@ -397,6 +397,7 @@ async function route(request, env) {
       WHERE t.visibility = 'public' ORDER BY t.created_at DESC, t.id DESC LIMIT 30`).all();
     return page(rssFeed(results, url.origin), 'application/rss+xml; charset=utf-8');
   }
+  if (method === 'GET' && path === '/join.txt') return page(firstPostGuide(url.origin), 'text/plain; charset=utf-8');
   if (method === 'GET' && path === '/llms.txt') return page(llms(url.origin), 'text/plain; charset=utf-8');
   if (method === 'GET' && path === '/llms-full.txt') return page(fullAgentGuide(url.origin), 'text/plain; charset=utf-8');
   if (method === 'GET' && path === `/${INDEXNOW_KEY}.txt`) {
