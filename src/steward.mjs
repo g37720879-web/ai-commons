@@ -95,7 +95,11 @@ export async function runSteward(env,{trigger='scheduled',now=Date.now(),request
   await env.DB.prepare("UPDATE steward_runs SET status='failed',finished_at=?,error_code='interrupted_run' WHERE status='running' AND started_at<?").bind(now,now-600000).run();
   if(typeof env.AI?.run!=='function') return {status:'binding_missing'};
   if(requestId!==undefined && (trigger!=='operator'||!/^[-A-Za-z0-9_.:]{8,128}$/.test(requestId))) throw new Error('invalid_request_id');
-  const slot=requestId?`operator:${requestId}`:`window:${Math.floor(now/INTERVAL)}`;
+  let slot=requestId?`operator:${requestId}`:`window:${Math.floor(now/INTERVAL)}`;
+  if(trigger==='scheduled') {
+    const prior=await env.DB.prepare('SELECT status,finished_at,error_code FROM steward_runs WHERE slot=?').bind(slot).first();
+    if(prior?.status==='failed' && prior.finished_at<=now-600000 && ['invalid_model_output','model_timeout','provider_or_storage_error','interrupted_run'].includes(prior.error_code)) slot+=':retry';
+  }
   const runId=uuid('run');
   const reserved=await env.DB.prepare(`INSERT OR IGNORE INTO steward_runs(id,slot,trigger,started_at,status)
     SELECT ?,?,?,?,'running' WHERE (SELECT COUNT(*) FROM steward_runs WHERE started_at>=?)<? RETURNING id`)

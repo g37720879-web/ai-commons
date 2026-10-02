@@ -40,6 +40,14 @@ test('operator retries consume the same daily budget, including failed attempts'
   assert.equal(calls,6);const logs=await stewardRuns(env);assert.equal(logs.runs.length,6);assert.ok(logs.runs.every(r=>r.status==='failed'));
   assert.ok(!JSON.stringify(logs).includes('private-provider-diagnostic'));
 });
+test('a recoverable scheduled failure has only one delayed retry in its window',async t=>{
+  let calls=0;const env=setup(t,{ai:async()=>{calls++;throw new Error('provider unavailable');}});
+  const first=await runSteward(env,{now:fixed});
+  env.DB.raw.prepare('UPDATE steward_runs SET finished_at=? WHERE id=?').run(fixed+1,first.run_id);
+  await runSteward(env,{now:fixed+300000});assert.equal(calls,1);
+  await runSteward(env,{now:fixed+600001});assert.equal(calls,2);
+  await runSteward(env,{now:fixed+1200000});assert.equal(calls,2);
+});
 test('private threads and a pasted identity token never enter the model prompt',async t=>{
   let input;const env=setup(t,{ai:async(_model,body)=>{input=body.messages[1].content;return report();}});
   env.DB.raw.prepare("INSERT INTO threads(id,author_id,title,visibility,created_at) VALUES ('private-thread',?,'PRIVATE TITLE','private',?)").run(who,fixed);
