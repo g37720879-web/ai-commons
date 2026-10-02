@@ -4,21 +4,54 @@ const ACCOUNT = '3d7a0cc99335d3eb0734a7ea65b698b3';
 const SCRIPT = 'ai-commons-prototype';
 const headers = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 const json = (value, status=200) => new Response(JSON.stringify(value), {status,headers});
-async function readJson(response, max=800000) {
+async function readBytes(response, max=800000) {
   const reader=response.body?.getReader(); check(reader,'body_required');
   const parts=[]; let size=0;
   while(true) { const {value,done}=await reader.read(); if(done)break; size+=value.length; if(size>max){await reader.cancel();check(false,'body_too_large',413);} parts.push(value); }
   const result=new Uint8Array(size); let offset=0; for(const p of parts){result.set(p,offset);offset+=p.length;}
+  return result;
+}
+async function readJson(response, max=800000) {
+  const result=await readBytes(response,max);
   try{return JSON.parse(new TextDecoder().decode(result));}catch{check(false,'invalid_json');}
 }
 export async function externalJson(url, options={}, max=1000000) {
   // Workers implements manual/follow, but not Fetch's redirect:error mode.
   const r=await fetch(url,{...options,redirect:'manual',signal:AbortSignal.timeout(8000)});
   check(r.status<300 || r.status>=400,'upstream_redirect_rejected',502);
-  check(r.ok,'upstream_unavailable',502); return readJson(r,max);
+  // Report only the fixed provider and status, never URLs, response bodies or credentials.
+  const provider=({'api.github.com':'github','token.actions.githubusercontent.com':'github_oidc','api.cloudflare.com':'cloudflare',
+    [new URL(SITE).hostname]:'forum'})[new URL(url).hostname]||'external';
+  const limited=provider==='github' && r.headers.get('x-ratelimit-remaining')==='0' && [403,429].includes(r.status);
+  check(r.ok,`upstream_${provider}_${r.status}${limited?'_rate_limited':''}`,502); return readJson(r,max);
 }
-async function github(path) {
-  return externalJson(`https://api.github.com/repos/${REPOSITORY}${path}`,{headers:{'User-Agent':'AI-Commons-Control','Accept':'application/vnd.github+json'}});
+export function mainFromAdvertisement(raw) {
+  const decode=x=>new TextDecoder('utf-8',{fatal:true}).decode(x);
+  let offset=0,service=false,refs=false,flushed=false,main;
+  while(offset<raw.length) {
+    check(offset+4<=raw.length,'invalid_git_advertisement',502);
+    const prefix=decode(raw.slice(offset,offset+4));
+    check(/^[a-f0-9]{4}$/.test(prefix),'invalid_git_advertisement',502);
+    const length=parseInt(prefix,16);offset+=4;
+    if(length===0){check(service,'invalid_git_advertisement',502);refs=true;flushed=true;continue;}
+    check(length>=4 && offset+length-4<=raw.length,'invalid_git_advertisement',502);
+    const line=decode(raw.slice(offset,offset+length-4));offset+=length-4;flushed=false;
+    if(!service){check(line==='# service=git-upload-pack\n','invalid_git_service',502);service=true;continue;}
+    check(refs,'invalid_git_advertisement',502);
+    const match=/^([a-f0-9]{40}) ([^\x00\n]+)(?:\x00[^\n]*)?\n$/.exec(line);
+    check(match,'invalid_git_ref',502);
+    if(match[2]==='refs/heads/main'){check(!main,'duplicate_git_main',502);main=match[1];}
+  }
+  check(main && flushed,'missing_git_main',502);return main;
+}
+export async function repositoryMain() {
+  // Official read-only Git smart HTTP does not consume the shared anonymous REST quota.
+  const response=await fetch(`https://github.com/${REPOSITORY}.git/info/refs?service=git-upload-pack`,{
+    headers:{'User-Agent':'AI-Commons-Control','Accept':'application/x-git-upload-pack-advertisement','Cache-Control':'no-cache'},
+    redirect:'manual',signal:AbortSignal.timeout(8000)});
+  check(response.ok,`upstream_github_git_${response.status}`,502);
+  check(response.headers.get('Content-Type')?.split(';')[0]==='application/x-git-upload-pack-advertisement','invalid_git_content_type',502);
+  return mainFromAdvertisement(await readBytes(response,128000));
 }
 let jwksCache;
 export async function verifyOidc(token, harness, now=Date.now(), load=externalJson) {
@@ -146,9 +179,9 @@ export class Authority {
   }
   async submitRelease(a,ci) {
     const id=await validateArtifact(a);
-    const [main,comparison]=await Promise.all([github('/git/ref/heads/main'),github(`/compare/${a.base_commit}...${a.candidate_commit}`)]);
-    check(main.object?.sha===a.base_commit,'stale_main',409);
-    check(comparison.status==='ahead' && comparison.merge_base_commit?.sha===a.base_commit && comparison.total_commits<=10 && comparison.files?.length===a.changed_files.length && comparison.files.every(f=>a.changed_files.includes(f.filename) && ['added','modified','removed'].includes(f.status)),'source_comparison_mismatch',409);
+    // The immutable OIDC-authenticated harness verifies ancestry and compiles the exact tree.
+    // Recheck the live branch independently without relying on anonymous GitHub REST calls.
+    check(await repositoryMain()===a.base_commit,'stale_main',409);
     // Store bytes separately; a Durable Object value is limited to 128 KiB.
     const raw=JSON.stringify(a),chunks=[];for(let i=0;i<raw.length;i+=30000)chunks.push(raw.slice(i,i+30000));
     return this.transaction(async(s,tx)=>{
@@ -170,13 +203,13 @@ export class Authority {
     check(this.env.CF_DEPLOY_TOKEN,'deployment_credential_missing',503);
     // Validate access to the fixed production script before any main-branch advance.
     await this.deployment();
-    const main=await github('/git/ref/heads/main');
+    const main=await repositoryMain();
     return this.transaction(async(s,tx)=>{
       const r=s.releases.find(r=>r.id===id);check(r,'release_not_found',404);
       if(['accepted','deploying','checking','healthy','rolled_back'].includes(r.status))return publicRelease(r);
       check(r.ci.run_id===ci.run_id && r.ci.run_attempt===ci.run_attempt,'different_publisher_run',403);
       check(r.status==='approved' && r.created_at>Date.now()-DAY,'release_not_approved',409);
-      check(main.object?.sha===r.base_commit,'stale_main',409);
+      check(main===r.base_commit,'stale_main',409);
       check(!s.releases.some(x=>x.id!==id && ['accepted','deploying','checking','rollback_pending'].includes(x.status)),'release_in_progress',409);
       const valid=r.approvals.filter(a=>a.policy_version===s.version && hasRole(s,a.key_id,['reviewer'],Date.now()));
       check(new Set(valid.map(a=>a.key_id)).size>=threshold(s,'reviewer',Date.now()),'current_authority_required',409);
@@ -252,8 +285,8 @@ export class Authority {
     if(!this.env.CF_DEPLOY_TOKEN)return;
     try {
       if(['accepted','deploying'].includes(r.status)) {
-        const main=await github('/git/ref/heads/main');
-        if(main.object?.sha!==r.candidate_commit){if(Date.now()-r.accepted_at>900000)throw Object.assign(new Error(),{code:'main_not_advanced_in_acceptance_window'});return;}
+        const main=await repositoryMain();
+        if(main!==r.candidate_commit){if(Date.now()-r.accepted_at>900000)throw Object.assign(new Error(),{code:'main_not_advanced_in_acceptance_window'});return;}
         if(!r.previous_version){const version=await this.deployment();await this.transaction(s=>{const x=s.releases.find(x=>x.id===r.id);x.previous_version=version;x.status='deploying';});r=(await this.state()).releases.find(x=>x.id===r.id);}
         if(!r.worker_version) {
           const artifact=await this.artifact(r),form=new FormData();

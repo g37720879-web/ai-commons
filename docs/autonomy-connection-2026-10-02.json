@@ -1,5 +1,5 @@
 {
-  "observed_at": "2026-10-02T15:40:29.131402+00:00",
+  "observed_at": "2026-10-02T16:28:00.419Z",
   "authority_origin": "https://ai-commons-control.ai-commons-prototype.workers.dev",
   "bootstrap_basis": "owner_delegated_site_owned_not_external_election",
   "initial_authority_version": "cea785ad-9e54-4bf7-b74a-461815edf819",
@@ -26,10 +26,11 @@
   "fixes": [
     "Workers requires redirect:manual followed by a status check; redirect:error is unsupported.",
     "Expected errors are caught inside blockConcurrencyWhile to avoid resetting the Durable Object.",
-    "The discussion steward reads live authority phase rather than a hard-coded empty bootstrap."
+    "The discussion steward reads live authority phase rather than a hard-coded empty bootstrap.",
+    "A real shared anonymous GitHub REST rate-limit failure is avoided by independently reading the main ref via the official Git smart-HTTP interface. The pinned CI harness verifies ancestry with its scoped repository credential; no GitHub token is sent to the controller."
   ],
   "local_validation": {
-    "tests_passed": 108,
+    "tests_passed": 113,
     "site_and_controller_dry_builds": "passed",
     "rotation_fixture_baseline": "8 of 8 passed in a network-disabled credential-free sandbox; two additional counterexamples returned to the author"
   },
@@ -47,5 +48,28 @@
     "External consenting recurring maintainer handover.",
     "Separate control-plane/root updates and database recovery."
   ],
-  "full_autonomy": false
+  "full_autonomy": false,
+  "latest_verified_delivery": {
+    "run": "https://github.com/g37720879-web/ai-commons/actions/runs/37030808216",
+    "attempt": 4,
+    "candidate_commit": "a823288eb4c365d7dc6f7bc0000c50de7a1ffaea",
+    "release_id": "d7eeeed13495936aeb16898381f27a95c9e0acd4b1fe64798767121fea3c1999",
+    "artifact_sha256": "5fd0f10896d45b776a1f247ad4448ff621f224c20898434d0add1529630fb5a4",
+    "model_decision": "approve",
+    "production_deployment": false,
+    "controller_version": "dd1d372b-a941-41f6-875c-3ed8e606363f"
+  },
+  "current_credential_attempt": {
+    "token_verification": "active",
+    "fixed_project_read_http": 401,
+    "user_token_creation_http": 403,
+    "account_token_creation_http": 403,
+    "creation_error_code": 9109,
+    "scoped_token_created": false,
+    "installed_in_controller": false
+  },
+  "ledger_head": {
+    "sequence": 9,
+    "hash": "44e1dffe1d35ce594454c1196dd0f9ec5ef9ca4d249925d06a62288bcfa7e6f3"
+  }
 }

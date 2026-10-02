@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ORIGIN,DAY,canonical,bytes,b64,hash,validateApplication,validateArtifact,validateCommand,threshold,allowedReleasePath} from '../control/protocol.mjs';
-import {Authority,applyCommand,verifyOidc,externalJson} from '../control/worker.mjs';
+import {Authority,applyCommand,verifyOidc,externalJson,mainFromAdvertisement,repositoryMain} from '../control/worker.mjs';
 import {messageLimit} from '../src/authority.mjs';
 
 async function keys(){const p=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']);const public_key=b64(new Uint8Array(await crypto.subtle.exportKey('raw',p.publicKey)));return {...p,public_key,key_id:await hash(public_key)};}
@@ -13,10 +13,34 @@ async function application(k,now=Date.now(),role='reviewer'){
 function context(){let queue=Promise.resolve();const map=new Map();const storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),transaction:async f=>f(storage),list:async({prefix,startAfter,limit})=>new Map([...map].filter(([k])=>k.startsWith(prefix)&&k>startAfter).sort(([a],[b])=>a.localeCompare(b)).slice(0,limit))};return {storage,blockConcurrencyWhile(f){const p=queue.then(f);queue=p.catch(()=>{});return p;},map};}
 async function command(k,state,action,target,value,now=Date.now()){const body={service:ORIGIN,purpose:'authority-command/v1',id:crypto.randomUUID(),issued_at:now-1,expires_at:now+60000,policy_version:state.version,action,target,value,reason:'Test exact consent and current authority.'};return {body,public_key:k.public_key,signature:await sign(k,body)};}
 async function setup(){const ctx=context(),a=new Authority(ctx,{});await a.state();return {ctx,a};}
+const packet=line=>(Buffer.byteLength(line)+4).toString(16).padStart(4,'0')+line;
+const advertisement=(sha,extra='')=>packet('# service=git-upload-pack\n')+'0000'+packet(sha+' HEAD\x00symref=HEAD:refs/heads/main\n')+packet(sha+' refs/heads/main\n')+extra+'0000';
+const gitResponse=sha=>new Response(advertisement(sha),{headers:{'Content-Type':'application/x-git-upload-pack-advertisement'}});
 test('Worker-side upstream reads use supported manual redirect mode and refuse redirects',async t=>{
   const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
   globalThis.fetch=async(_url,options)=>{assert.equal(options.redirect,'manual');return new Response('',{status:302,headers:{Location:'https://other.invalid/'}});};
   await assert.rejects(externalJson('https://token.actions.githubusercontent.com/.well-known/jwks'),/upstream_redirect_rejected/);
+});
+test('upstream failures identify provider limits without exposing credentials or response content',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+  globalThis.fetch=async()=>new Response('sensitive provider response',{status:403,headers:{'x-ratelimit-remaining':'0'}});
+  await assert.rejects(externalJson('https://api.github.com/repos/fixed/ref'),e=>e.code==='upstream_github_403_rate_limited' && !e.message.includes('sensitive'));
+  globalThis.fetch=async()=>new Response('sensitive credential detail',{status:401});
+  await assert.rejects(externalJson('https://api.cloudflare.com/client/v4/fixed?private=query'),e=>e.code==='upstream_cloudflare_401' && !e.message.includes('private'));
+});
+test('Git branch verification parses complete framed data and rejects ambiguous or partial main refs',()=>{
+  const sha='a'.repeat(40),good=advertisement(sha,packet('b'.repeat(40)+' refs/heads/other\n'));
+  assert.equal(mainFromAdvertisement(bytes(good)),sha);
+  for(const bad of [good.slice(0,-1),good.slice(0,-4),good+'junk',good.replace('refs/heads/main\n','refs/heads/main-other\n'),advertisement(sha,packet('b'.repeat(40)+' refs/heads/main\n'))])assert.throws(()=>mainFromAdvertisement(bytes(bad)));
+});
+test('repository main uses the fixed read-only Git endpoint and rejects redirects and HTML responses',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+  globalThis.fetch=async(url,options)=>{assert.equal(String(url),'https://github.com/g37720879-web/ai-commons.git/info/refs?service=git-upload-pack');assert.equal(options.redirect,'manual');assert.equal(options.headers.Authorization,undefined);return gitResponse('a'.repeat(40));};
+  assert.equal(await repositoryMain(),'a'.repeat(40));
+  globalThis.fetch=async()=>new Response('',{status:302,headers:{Location:'https://other.invalid/'}});
+  await assert.rejects(repositoryMain(),/upstream_github_git_302/);
+  globalThis.fetch=async()=>new Response(advertisement('a'.repeat(40)),{headers:{'Content-Type':'text/html'}});
+  await assert.rejects(repositoryMain(),/invalid_git_content_type/);
 });
 test('bootstrap creates a real separate authority root, discloses owner basis and never external affiliation',async()=>{
   const {a,ctx}=await setup(),s=await a.status();assert.equal(s.status,'owner_delegated_bootstrap');assert.equal(s.roles.length,3);assert.equal(s.community_election,false);assert.equal(s.automatic_deployment,false);assert.ok(s.roles.every(r=>r.affiliation==='site_owned_not_external_participant'));
@@ -46,7 +70,7 @@ test('a second checked artifact preserves the first waiting approval and archive
   const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
   const {a,ctx}=await setup(),base='a'.repeat(40),candidate='b'.repeat(40),first='c'.repeat(64);
   await a.transaction(s=>s.releases.push({id:first,base_commit:base,status:'approved',created_at:Date.now(),approvals:[{key_id:s.resident.key_id,policy_version:1}],decision:{decision:'approve'}}));
-  globalThis.fetch=async url=>Response.json(String(url).endsWith('/git/ref/heads/main')?{object:{sha:base}}:{status:'ahead',merge_base_commit:{sha:base},total_commits:1,files:[{filename:'docs/new.md',status:'added'}]});
+  globalThis.fetch=async()=>gitResponse(base);
   const code='// complete fixture module\n'.repeat(10),artifact={schema:'ai-commons-worker/v1',repository:'g37720879-web/ai-commons',base_commit:base,candidate_commit:candidate,code,artifact_sha256:await hash(code),changed_files:['docs/new.md'],diff:'+ documentation'};
   await a.submitRelease(artifact,{run_id:'2',run_attempt:'1'});assert.equal((await a.state()).releases.find(r=>r.id===first).status,'approved');
   assert.equal((await ctx.storage.get('release:'+first)).decision.decision,'approve');
@@ -79,7 +103,7 @@ test('publication is blocked without a separate provider credential even after s
 });
 test('acceptance atomically consumes an exact release once and rejects changed authority before acceptance',async t=>{
   const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
-  globalThis.fetch=async()=>Response.json({object:{sha:'a'.repeat(40)}});
+  globalThis.fetch=async()=>gitResponse('a'.repeat(40));
   const {a,ctx}=await setup();a.env.CF_DEPLOY_TOKEN='local-test-token';
   a.deployment=async()=>'confirmed-prior-version';
   const seed=await a.state(),ci={run_id:'1',run_attempt:'1'};
