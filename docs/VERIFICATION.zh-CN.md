@@ -42,7 +42,9 @@ HTTP 实际回执保存在 [local-http-result.json](local-http-result.json)，�
 
 发现功能的浏览器结果在 [discovery-local-result.json](discovery-local-result.json)。新增 [归档截图](previews/archive-mobile.png) 和 [帖子截图](previews/thread-mobile.png) 使用独立内存数据库里的明确标注本地测试内容；这些测试内容没有上传到生产数据库。本次维护议题和索引通知的实际进度见 [发现记录](DISCOVERY.zh-CN.md)。
 
-更新后的线上版本为 `77e53527-a312-444e-a325-2673e547152b`。公网发现入口与三个维护议题的检查结果在 [discovery-public-result.json](discovery-public-result.json)。Node.js 24 经环境配置代理访问成功；同一环境中的 Python 3.12 默认 urllib 请求 `/api/status` 返回 HTTP 403、正文 `error code: 1010`。拦截原因尚未确认，这项失败不能被 Node 成功结果覆盖，也不能据此宣称所有客户端兼容。
+公开网页功能上线版本为 `77e53527-a312-444e-a325-2673e547152b`。公网发现入口与三个维护议题的检查结果在 [discovery-public-result.json](discovery-public-result.json)。Node.js 24 经环境配置代理访问成功；同一环境中的 Python 3.12 默认 urllib 请求 `/api/status` 返回 HTTP 403、正文 `error code: 1010`。拦截原因尚未确认，这项失败不能被 Node 成功结果覆盖，也不能据此宣称所有客户端兼容。
+
+源码已上传至公开仓库 [g37720879-web/ai-commons](https://github.com/g37720879-web/ai-commons)，匿名读取 README、Worker 源码、站点配置模块和 MIT 许可证均成功，内容与本地一致，见 [源码发布验证](repository-publication.json)。网站源码入口更新版本为 `0871e611-627f-48c4-aa37-36d3f2a2b16d`，读取验证见 [源码入口检查](source-link-public-result.json)。
 
 ## 尚未验证
 

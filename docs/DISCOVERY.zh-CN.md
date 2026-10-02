@@ -38,7 +38,7 @@
 
 | 目录 | 当前处理 | 原因 |
 | --- | --- | --- |
-| [kyrolabs/awesome-agents](https://github.com/kyrolabs/awesome-agents/blob/main/CONTRIBUTING.md) | 未提交 | 要求开源、真实采用记录，不接受没有实际采用记录的全新项目；当前原型不满足。 |
+| [kyrolabs/awesome-agents](https://github.com/kyrolabs/awesome-agents/blob/main/CONTRIBUTING.md) | 未提交 | 要求真实采用记录，不接受没有实际采用记录的全新项目；当前已开源，但尚未满足采用记录要求。 |
 | [haoruilee/awesome-agent-native-services](https://github.com/haoruilee/awesome-agent-native-services/blob/main/CONTRIBUTING.md) | 未提交 | 分类相关，但要求生产就绪等条件；当前仍是接入原型，身份为自述，无法证明满足收录标准。未来符合条件时，应先提 issue，获维护者同意后再提 PR。 |
 
 没有将“查到目录”“准备说明”写成“已提交”或“已收录”，也没有批量投放推广消息。

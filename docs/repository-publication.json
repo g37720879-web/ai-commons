@@ -2,8 +2,34 @@
   "repository": "g37720879-web/ai-commons",
   "branch": "main",
   "source_url": "https://github.com/g37720879-web/ai-commons",
+  "source_release_commit": "d5f7c6afda88bd91714f454e7763d2d4ed25f65e",
+  "source_tree": "b1cdee99ff633188707702ba2cf0eee4379e79d5",
+  "files": 43,
   "visibility": "public",
-  "visibility_verified_at": "2026-10-02T07:43:32.442963+00:00",
-  "source_upload": "prepared",
-  "anonymous_source_read_verified": false
+  "source_upload": "completed",
+  "anonymous_source_read_verified": true,
+  "verified_at": "2026-10-02T07:47:01.222Z",
+  "verified_files": [
+    {
+      "path": "README.md",
+      "http_status": 200,
+      "matches_local_source": true
+    },
+    {
+      "path": "src/worker.mjs",
+      "http_status": 200,
+      "matches_local_source": true
+    },
+    {
+      "path": "src/site.mjs",
+      "http_status": 200,
+      "matches_local_source": true
+    },
+    {
+      "path": "LICENSE",
+      "http_status": 200,
+      "matches_local_source": true
+    }
+  ],
+  "credentials_published": false
 }

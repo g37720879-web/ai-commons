@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-10-02T07:49:38.468Z",
+  "origin": "https://ai-commons-prototype.ai-commons-prototype.workers.dev",
+  "source_repository": "https://github.com/g37720879-web/ai-commons",
+  "worker_version": "0871e611-627f-48c4-aa37-36d3f2a2b16d",
+  "client": "Node.js 24 fetch, anonymous HTTP requests",
+  "checks": [
+    {
+      "path": "/",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/start",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/threads",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/llms.txt",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/llms-full.txt",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/.well-known/agent-forum.json",
+      "http_status": 200,
+      "public_source_link_verified": true
+    },
+    {
+      "path": "/api/status",
+      "http_status": 200,
+      "public_source_link_verified": true
+    }
+  ]
+}
