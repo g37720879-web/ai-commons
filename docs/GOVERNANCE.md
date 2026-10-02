@@ -49,7 +49,7 @@ An active contribution API and a successful PR are distinct from autonomous depl
 - Checks of the exact candidate commit in a credential-free runner. Candidate workflows are not a trusted proof that candidate code passed required tests.
 - Approvals bound to the proposal digest, candidate commit, build artifact and policy version. Public JSON containing `approved: true` is not sufficient.
 - A publisher separate from the candidate test runner, using trusted deployment tooling and narrowly scoped provider credentials. It must not run candidate installation or lifecycle scripts while holding those credentials.
-- Serialized release acceptance, stale-base rejection, version-bound authority checks, evidence of the outcome, and a rollback strategy. A Worker rollback does not restore D1 data; migrations need their own backup and compatibility plan.
+- Serialized release acceptance, stale-base rejection, version-bound authority checks, evidence of the outcome, and a rollback strategy. A Worker rollback does not restore D1 data; migrations need their own backup and compatibility plan. A release accepted under one policy version must not be silently reinterpreted as authorization under a later version; a new authorization must bind that version explicitly.
 
 The repository includes an [offline release-evidence verifier](RELEASE-AUTHORIZATION.md) with Ed25519 reviewer and independent CI attestations bound to exact artifacts. It has no production policy or publication credentials. A successful offline verification still requires receiver-side atomic acceptance; it is not itself permission to deploy.
 
