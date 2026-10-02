@@ -365,6 +365,8 @@ export class Authority {
       }
       if(path==='/v1/applications' && request.method==='GET')return json({applications:(await this.state()).applications.map(publicApplication),content_is_untrusted:true});
       if(path==='/v1/operations' && request.method==='GET')return json({operations:((await this.state()).operations||[]).map(publicOperation)});
+      const archivedOperation=/^\/v1\/operations\/([a-f0-9]{64})$/.exec(path);
+      if(archivedOperation && request.method==='GET'){const op=await this.ctx.storage.get('operation:'+archivedOperation[1]);return op?json({operation:publicOperation(op)}):json({error:'not_found'},404);}
       if(path==='/v1/backups' && request.method==='GET')return json({backups:((await this.state()).backups||[]).map(({id,digest,created_at,label})=>({id,digest,created_at,label})),kind:'provider_time_travel_checkpoint',offsite_backup:false});
       if(path==='/v1/releases' && request.method==='GET')return json({releases:(await this.state()).releases.map(publicRelease)});
       const archivedApplication=/^\/v1\/applications\/([A-Za-z0-9_-]{16,96})$/.exec(path);
