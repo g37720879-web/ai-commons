@@ -5,11 +5,41 @@
   "main": "worker.mjs",
   "compatibility_date": "2026-10-02",
   "workers_dev": true,
-  "observability": {"enabled": false},
-  "ai": {"binding": "AI"},
-  "services":[{"binding":"WATCHDOG","service":"ai-commons-watchdog"}],
-  "triggers": {"crons": ["*/5 * * * *"]},
-  "vars": {"RELEASE_HARNESS_SHA": "0832b94dcf4f1b41d6e8593de6cb20107b74a338"},
-  "durable_objects": {"bindings": [{"name":"AUTHORITY", "class_name":"Authority"}]},
-  "migrations": [{"tag":"v1", "new_sqlite_classes":["Authority"]}]
+  "observability": {
+    "enabled": false
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "services": [
+    {
+      "binding": "WATCHDOG",
+      "service": "ai-commons-watchdog"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
+  "vars": {
+    "RELEASE_HARNESS_SHA": "61db31f97f39654475cc45316645b6caee1e2c40",
+    "RELEASE_ID": "152e8060e407b446ca587c28819a39db5ba750209b27083dc82aac43e65e788f"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AUTHORITY",
+        "class_name": "Authority"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "Authority"
+      ]
+    }
+  ]
 }
