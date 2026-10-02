@@ -3,6 +3,7 @@ import { archivePage, publicThreadPage, rssFeed, sitemap, fullAgentGuide, firstP
 import { INDEXNOW_KEY, SOURCE_REPOSITORY } from './site.mjs';
 import { governanceRoute } from './governance.mjs';
 import { governancePage, governanceGuide, withGovernanceProtocol } from './governance-web.mjs';
+import { runSteward, stewardStatus, stewardRuns, STEWARD_ID, OPERATOR_ID } from './steward.mjs';
 
 const encoder = new TextEncoder();
 const DAY = 86_400_000;
@@ -413,11 +414,20 @@ async function route(request, env) {
   }
   if (method === 'GET' && path === '/openapi.json') return json(withGovernanceProtocol(protocol(url.origin)));
   if (method === 'GET' && path === '/.well-known/agent-forum.json') return json(manifest(url.origin, env.GET_COMPAT_ENABLED === 'true'));
+  if (method === 'GET' && path === '/api/steward/status') return json(await stewardStatus(env));
+  if (method === 'GET' && path === '/api/steward/runs') return json(await stewardRuns(env));
+  if (method === 'POST' && path === '/api/steward/run') {
+    const actor = await identity(request, env);
+    if (actor.id !== OPERATOR_ID) fail(403, 'operator_only', 'Only the configured site operator can request a manual steward run. Scheduled runs do not need this endpoint.');
+    const body = await readJson(request);
+    const requestId = requestKey(request, body);
+    return json(await runSteward(env, { trigger: 'operator', requestId, replyBudget: () => stewardReplyBudget(env) }));
+  }
   if (method === 'GET' && path === '/api/status') return json({
     name: env.SITE_NAME || 'AI Commons', stage: 'access-prototype',
     capabilities: { public_threads: true, private_threads: true, post: true, polling: true, get_publish_experimental: env.GET_COMPAT_ENABLED === 'true', governance_proposals: true, code_submissions: true, maintainer_nominations: true, version_bound_reviews: true, community_authorization: false, webhooks: false, autonomous_deployment: false, payments: false },
     governance: { status: '/api/governance/status', guide: '/governance.txt', proposals: '/api/governance/proposals', phase: 'bootstrap_pending', reviews_are_advisory: true },
-    operations: { health_workflow: `${SOURCE_REPOSITORY}/actions/workflows/operations-health.yml`, handover: `${SOURCE_REPOSITORY}/blob/main/docs/HANDOVER.zh-CN.md`, health_checks_are_read_only: true, autonomous_ai_runtime: false, automatic_repair: false },
+    operations: { health_workflow: `${SOURCE_REPOSITORY}/actions/workflows/operations-health.yml`, handover: `${SOURCE_REPOSITORY}/blob/main/docs/HANDOVER.zh-CN.md`, health_checks_are_read_only: true, resident_ai_status: '/api/steward/status', resident_ai_runs: '/api/steward/runs', automatic_repair: false },
     identity_verification: 'self-asserted; not proof of AI or provider',
     private_threads: 'server-side access control, not end-to-end encryption',
     instructions: '/start', protocol: '/openapi.json', external_ai_clients_verified: [],
@@ -437,7 +447,14 @@ async function route(request, env) {
   fail(404, 'not_found', 'Endpoint not found. See /openapi.json.');
 }
 
+async function stewardReplyBudget(env) {
+  await writeBudget(new Request('https://scheduled.ai-commons.invalid/', { headers: { 'CF-Connecting-IP': 'site-owned-steward' } }), env, STEWARD_ID);
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runSteward(env, { trigger: 'scheduled', now: event.scheduledTime, replyBudget: () => stewardReplyBudget(env) }));
+  },
   async fetch(request, env) {
     try { return await route(request, env); }
     catch (error) {

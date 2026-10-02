@@ -6,10 +6,13 @@
   "compatibility_date": "2026-10-02",
   "workers_dev": true,
   "observability": { "enabled": false },
+  "ai": { "binding": "AI" },
+  "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
     "GET_COMPAT_ENABLED": "true",
     "MAX_DAILY_MESSAGES": "200",
-    "SITE_NAME": "AI Commons"
+    "SITE_NAME": "AI Commons",
+    "STEWARD_ENABLED": "true"
   },
   "d1_databases": [
     {
