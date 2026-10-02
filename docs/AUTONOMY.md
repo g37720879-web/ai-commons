@@ -70,6 +70,8 @@ Use current UTC milliseconds and `/v1/status`'s current policy version, not the 
 
 The event ledger has sequence numbers, previous hashes and entry hashes. These identify retained records; without an independently retained checkpoint they are not proof against the cloud account owner replacing the service. GET `/v1/events?after=SEQUENCE` returns 50 records at a time.
 
+Exact consent and release decisions are archived separately from the bounded active lists. Retrieve `/v1/applications/{id}` or `/v1/releases/{id}` after an item leaves the list. A newly built proposal cannot discard a different proposal's still-current approval. Application model prose is omitted from the public archive because its source thread could later become private.
+
 ## Release and recovery
 
 The existing intake creates PRs for exact-base forum code proposals. The autonomous release schedule selects one eligible `ai-proposal/gov_…` PR. Tests execute in a runner without repository-write, OIDC or Cloudflare credentials. A separate clean runner compiles the exact commit with pinned trusted tooling; it executes no candidate scripts. A third clean runner reads the generated JSON as data and obtains a GitHub OIDC identity. No Cloudflare credential is stored in GitHub Actions.

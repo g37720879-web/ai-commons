@@ -104,6 +104,9 @@ export class Authority {
       }
       const previousSequence=s.sequence;
       const result=await change(s,tx);
+      // Preserve exact consent and release decisions even after the active lists age out.
+      for(const app of s.applications)await tx.put('application:'+app.id,app);
+      for(const release of s.releases)await tx.put('release:'+release.id,release);
       for(const e of s.events)if(e.seq>previousSequence || e.seq===1)await tx.put('event:'+String(e.seq).padStart(12,'0'),e);
       s.events=s.events.slice(-30);
       await tx.put('state',s);return result;
@@ -134,11 +137,11 @@ export class Authority {
     const app=await validateApplication(envelope,Date.now());
     return this.transaction(async(s,tx)=>{
       const old=s.applications.find(a=>a.id===app.id);if(old){check(old.hash===app.hash,'idempotency_conflict',409);return publicApplication(old);}
-      const recorded=await tx.get('application:'+app.id);if(recorded){check(recorded.hash===app.hash,'idempotency_conflict',409);return {...recorded,replayed:true};}
+      const recorded=await tx.get('application:'+app.id);if(recorded){check(recorded.hash===app.hash,'idempotency_conflict',409);return {...publicApplication(recorded),replayed:true};}
       check(!s.applications.some(a=>a.key_id===app.key_id && a.status==='pending' && a.body.expires_at>Date.now()),'application_already_pending',409);
       consume(s,'applications',20,Date.now());
       s.applications=s.applications.filter(a=>a.status==='pending' && a.body.expires_at>Date.now()).slice(-19);
-      s.applications.push(app);await tx.put('application:'+app.id,{id:app.id,hash:app.hash,accepted_at:Date.now()});await emit(s,'application_received',{application:app.id,key_id:app.key_id,role:app.body.role});return publicApplication(app);
+      s.applications.push(app);await emit(s,'application_received',{application:app.id,key_id:app.key_id,role:app.body.role});return publicApplication(app);
     });
   }
   async submitRelease(a,ci) {
@@ -153,7 +156,10 @@ export class Authority {
       check(!await tx.get('accepted:'+id),'release_id_already_consumed',409);
       check(!s.releases.some(r=>['accepted','deploying','checking','rollback_pending'].includes(r.status)),'release_in_progress',409);
       consume(s,'builds',6,Date.now());
-      s.releases=s.releases.filter(r=>['accepted','deploying','checking','rollback_pending','healthy'].includes(r.status)).slice(-7);
+      const waiting=s.releases.filter(r=>['review_pending','approved'].includes(r.status) && r.base_commit===a.base_commit && r.created_at>Date.now()-DAY);
+      check(waiting.length<8,'release_queue_full',409);
+      const history=s.releases.filter(r=>!waiting.includes(r)).slice(-4);
+      s.releases=[...history,...waiting];
       const r={id,base_commit:a.base_commit,candidate_commit:a.candidate_commit,artifact_sha256:a.artifact_sha256,status:'review_pending',created_at:Date.now(),ci,approvals:[],artifact_chunks:chunks.length,health_failures:0};
       for(let i=0;i<chunks.length;i++)await tx.put(`artifact:${id}:${i}`,chunks[i]);
       s.releases.push(r);await emit(s,'checked_artifact_received',{release:id,candidate:a.candidate_commit,artifact:a.artifact_sha256,ci});return publicRelease(r);
@@ -304,6 +310,10 @@ export class Authority {
       }
       if(path==='/v1/applications' && request.method==='GET')return json({applications:(await this.state()).applications.map(publicApplication),content_is_untrusted:true});
       if(path==='/v1/releases' && request.method==='GET')return json({releases:(await this.state()).releases.map(publicRelease)});
+      const archivedApplication=/^\/v1\/applications\/([A-Za-z0-9_-]{16,96})$/.exec(path);
+      if(archivedApplication && request.method==='GET'){const app=await this.ctx.storage.get('application:'+archivedApplication[1]);return app?json({application:publicApplication(app),content_is_untrusted:true}):json({error:'not_found'},404);}
+      const archivedRelease=/^\/v1\/releases\/([a-f0-9]{64})$/.exec(path);
+      if(archivedRelease && request.method==='GET'){const release=await this.ctx.storage.get('release:'+archivedRelease[1]);return release?json({release:publicRelease(release)}):json({error:'not_found'},404);}
       if(path==='/v1/applications' && request.method==='POST')return json(await this.submitApplication(await readJson(request,10000)),201);
       if(path==='/v1/commands' && request.method==='POST')return json(await this.command(await readJson(request,10000)));
       if(path.startsWith('/v1/releases') && request.method==='POST') {

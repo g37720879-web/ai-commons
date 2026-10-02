@@ -34,6 +34,23 @@ test('signed application alone cannot grant a role; the delegated governor can a
   s=await a.state();const role=s.roles.find(r=>r.key_id===k.key_id);assert.equal(role.role,'reviewer');assert.equal(role.consent_hash,app.hash);assert.equal(s.version,2);assert.ok(role.expires_at>Date.now()+6*DAY);
   assert.equal(threshold(s,'reviewer',Date.now()),2);
 });
+test('granted application consent remains readable after leaving the active application list',async()=>{
+  const {a}=await setup(),k=await keys(),envelope=await application(k),app=await a.submitApplication(envelope);
+  await a.residentCommand('application.approve',app.id,app.hash,'Reviewed local fixture consent and role.',1);
+  await a.transaction(s=>{s.applications=[];});
+  const read=await a.fetch(new Request(ORIGIN+'/v1/applications/'+app.id));const data=await read.json();
+  assert.equal(data.application.signature,envelope.signature);assert.equal(data.application.status,'granted');assert.equal(data.application.hash,app.hash);
+  assert.equal((await a.submitApplication(envelope)).replayed,true);assert.equal((await a.state()).roles.length,4);
+});
+test('a second checked artifact preserves the first waiting approval and archives its exact decision',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+  const {a,ctx}=await setup(),base='a'.repeat(40),candidate='b'.repeat(40),first='c'.repeat(64);
+  await a.transaction(s=>s.releases.push({id:first,base_commit:base,status:'approved',created_at:Date.now(),approvals:[{key_id:s.resident.key_id,policy_version:1}],decision:{decision:'approve'}}));
+  globalThis.fetch=async url=>Response.json(String(url).endsWith('/git/ref/heads/main')?{object:{sha:base}}:{status:'ahead',merge_base_commit:{sha:base},total_commits:1,files:[{filename:'docs/new.md',status:'added'}]});
+  const code='// complete fixture module\n'.repeat(10),artifact={schema:'ai-commons-worker/v1',repository:'g37720879-web/ai-commons',base_commit:base,candidate_commit:candidate,code,artifact_sha256:await hash(code),changed_files:['docs/new.md'],diff:'+ documentation'};
+  await a.submitRelease(artifact,{run_id:'2',run_attempt:'1'});assert.equal((await a.state()).releases.find(r=>r.id===first).status,'approved');
+  assert.equal((await ctx.storage.get('release:'+first)).decision.decision,'approve');
+});
 test('role revocation and stale-policy commands cannot authorize a queued release',async()=>{
   const {a}=await setup(),k=await keys(),app=await a.submitApplication(await application(k));await a.residentCommand('application.approve',app.id,app.hash,'Consent fixture has passed the review.',1);
   const s=await a.state(),old=await command(k,s,'release.approve','r','a'.repeat(64));await a.residentCommand('role.revoke',app.id,null,'End this local test appointment immediately.',s.version);
