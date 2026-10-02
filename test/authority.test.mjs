@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ORIGIN,DAY,canonical,bytes,b64,hash,validateApplication,validateArtifact,validateCommand,threshold,allowedReleasePath} from '../control/protocol.mjs';
-import {Authority,applyCommand,verifyOidc} from '../control/worker.mjs';
+import {Authority,applyCommand,verifyOidc,externalJson} from '../control/worker.mjs';
 import {messageLimit} from '../src/authority.mjs';
 
 async function keys(){const p=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']);const public_key=b64(new Uint8Array(await crypto.subtle.exportKey('raw',p.publicKey)));return {...p,public_key,key_id:await hash(public_key)};}
@@ -13,6 +13,11 @@ async function application(k,now=Date.now(),role='reviewer'){
 function context(){let queue=Promise.resolve();const map=new Map();const storage={get:async k=>structuredClone(map.get(k)),put:async(k,v)=>map.set(k,structuredClone(v)),transaction:async f=>f(storage),list:async({prefix,startAfter,limit})=>new Map([...map].filter(([k])=>k.startsWith(prefix)&&k>startAfter).sort(([a],[b])=>a.localeCompare(b)).slice(0,limit))};return {storage,blockConcurrencyWhile(f){const p=queue.then(f);queue=p.catch(()=>{});return p;},map};}
 async function command(k,state,action,target,value,now=Date.now()){const body={service:ORIGIN,purpose:'authority-command/v1',id:crypto.randomUUID(),issued_at:now-1,expires_at:now+60000,policy_version:state.version,action,target,value,reason:'Test exact consent and current authority.'};return {body,public_key:k.public_key,signature:await sign(k,body)};}
 async function setup(){const ctx=context(),a=new Authority(ctx,{});await a.state();return {ctx,a};}
+test('Worker-side upstream reads use supported manual redirect mode and refuse redirects',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
+  globalThis.fetch=async(_url,options)=>{assert.equal(options.redirect,'manual');return new Response('',{status:302,headers:{Location:'https://other.invalid/'}});};
+  await assert.rejects(externalJson('https://token.actions.githubusercontent.com/.well-known/jwks'),/upstream_redirect_rejected/);
+});
 test('bootstrap creates a real separate authority root, discloses owner basis and never external affiliation',async()=>{
   const {a,ctx}=await setup(),s=await a.status();assert.equal(s.status,'owner_delegated_bootstrap');assert.equal(s.roles.length,3);assert.equal(s.community_election,false);assert.equal(s.automatic_deployment,false);assert.ok(s.roles.every(r=>r.affiliation==='site_owned_not_external_participant'));
   assert.ok(await ctx.storage.get('resident_private_key'));assert.ok(!JSON.stringify(s).includes('"d":'));
@@ -59,6 +64,7 @@ test('acceptance atomically consumes an exact release once and rejects changed a
   const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
   globalThis.fetch=async()=>Response.json({object:{sha:'a'.repeat(40)}});
   const {a,ctx}=await setup();a.env.CF_DEPLOY_TOKEN='local-test-token';
+  a.deployment=async()=>'confirmed-prior-version';
   const seed=await a.state(),ci={run_id:'1',run_attempt:'1'};
   await a.transaction(s=>s.releases.push({id:'r',base_commit:'a'.repeat(40),candidate_commit:'b'.repeat(40),artifact_sha256:'c'.repeat(64),status:'approved',created_at:Date.now(),ci,approvals:[{key_id:seed.resident.key_id,policy_version:1}]}));
   const results=await Promise.all([a.acceptRelease('r',ci),a.acceptRelease('r',ci)]);
@@ -66,6 +72,15 @@ test('acceptance atomically consumes an exact release once and rejects changed a
   await a.transaction(s=>{s.version++;s.releases.push({id:'stale',base_commit:'a'.repeat(40),candidate_commit:'d'.repeat(40),artifact_sha256:'e'.repeat(64),status:'approved',created_at:Date.now(),ci,approvals:[{key_id:seed.resident.key_id,policy_version:1}]});s.releases[0].status='healthy';});
   await assert.rejects(a.acceptRelease('stale',ci),/current_authority_required/);
   assert.equal(await ctx.storage.get('accepted:stale'),undefined);
+});
+test('code reviews use code criteria without incorrectly requiring an applicant appointment history',async()=>{
+  const {a}=await setup();let input;
+  await a.transaction(s=>s.releases.push({id:'fixture-release',status:'review_pending',artifact_sha256:'a'.repeat(64),created_at:Date.now(),approvals:[]}));
+  a.artifact=async()=>({candidate_commit:'b'.repeat(40),changed_files:['docs/receipts.md'],diff:'+ Check the exact release receipt before claiming publication.'});
+  a.env.AI={run:async(_model,request)=>{input=request;return {response:{decision:'defer',reason:'Mocked decision; this test verifies the review scope only.'}};}};
+  await a.modelReview();const context=JSON.parse(input.messages[1].content);
+  assert.equal(context.review_type,'release');assert.match(input.messages[0].content,/author need not hold an authority role/);assert.ok(!input.messages[0].content.includes('Defer governor applications'));
+  assert.equal((await a.state()).releases[0].decision.decision,'defer');
 });
 test('dynamic application limits fail closed and preserve an explicit pause',async()=>{
   let limit=0,fail=false;const binding={fetch:async()=>{if(fail)throw new Error();return Response.json({messages_per_day:limit});}};

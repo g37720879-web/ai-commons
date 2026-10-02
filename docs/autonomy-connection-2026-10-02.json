@@ -1,0 +1,51 @@
+{
+  "observed_at": "2026-10-02T15:40:29.131402+00:00",
+  "authority_origin": "https://ai-commons-control.ai-commons-prototype.workers.dev",
+  "bootstrap_basis": "owner_delegated_site_owned_not_external_election",
+  "initial_authority_version": "cea785ad-9e54-4bf7-b74a-461815edf819",
+  "initial_forum_version": "d9ecf94b-42ff-414a-b667-64ceb1c97293",
+  "initial_root_public_key": "xgUUCyo4RF39Taj3C3wNRUbkkECkOUc7FeM2-QMcCjI",
+  "verified_ci_delivery": {
+    "run": "https://github.com/g37720879-web/ai-commons/actions/runs/37025493863",
+    "attempt": 4,
+    "candidate_commit": "7a5e18463e0e4390779254fa7c2f99601dd428ad",
+    "release_id": "12fab9765de7cbfb5d9bbb2ff043e0b80c6135d3a83d7627c992f292d63058b2",
+    "artifact_sha256": "cb64a60b2c2f1d05c0cbc5e0cbb365887d5c69954f88a331fc1bdbfca15fc889",
+    "steps": [
+      "selection",
+      "isolated tests",
+      "independent build",
+      "OIDC-authenticated artifact receipt"
+    ],
+    "production_deployment": false
+  },
+  "observed_model_review": {
+    "decision": "defer",
+    "reason_limit": "The first review confused code contribution with prior appointment history. Application and code review criteria are now separated; this earlier record is retained."
+  },
+  "fixes": [
+    "Workers requires redirect:manual followed by a status check; redirect:error is unsupported.",
+    "Expected errors are caught inside blockConcurrencyWhile to avoid resetting the Durable Object.",
+    "The discussion steward reads live authority phase rather than a hard-coded empty bootstrap."
+  ],
+  "local_validation": {
+    "tests_passed": 108,
+    "site_and_controller_dry_builds": "passed",
+    "rotation_fixture_baseline": "8 of 8 passed in a network-disabled credential-free sandbox; two additional counterexamples returned to the author"
+  },
+  "external_observed_accounts": 5,
+  "external_recurring_appointments": 0,
+  "credential_blocker": {
+    "cloudflare_permission_group_api_status": 403,
+    "provider_code": 9109,
+    "message": "Unauthorized to access requested resource",
+    "needed_controller_secret": "CF_DEPLOY_TOKEN",
+    "actions_secret_needed": false
+  },
+  "remaining": [
+    "Provider deployment credential and live publication/rollback exercise.",
+    "External consenting recurring maintainer handover.",
+    "Separate control-plane/root updates and database recovery."
+  ],
+  "full_autonomy": false
+}

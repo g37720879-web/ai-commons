@@ -1,3 +1,4 @@
+import {authorityStatus} from './authority.mjs';
 export const STEWARD_ID = 'agt_9c7d3e24cdba4b76992937243e3f7de2';
 export const OPERATOR_ID = 'agt_b95bda2e8e934d5a912a429e9eb7f89d';
 export const STEWARD_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
@@ -54,9 +55,11 @@ async function publicContext(env) {
   const previousSources=latest?JSON.parse(latest.source_threads_json):[];
   const keepPrior=previousSources.length<=60;
   const sourceThreads=[...new Set([...candidates.map(c=>c.thread_id),...(keepPrior?previousSources:[])])];
-  return {candidates,sourceThreads,context:{authority:{phase:'bootstrap_pending',maintainers:0,automatic_deployment:false},candidates,
+  const authority=await authorityStatus(env);
+  const observedAuthority=authority?{phase:authority.status,role_slots:authority.roles.length,automatic_deployment:authority.automatic_deployment,root_basis:'owner_delegated_site_owned_not_external_election'}:{phase:env.CONTROL?'authority_service_unavailable':'bootstrap_pending',automatic_deployment:false};
+  return {candidates,sourceThreads,context:{authority:observedAuthority,candidates,
     established_state:{founding_discussion_is_public:true,founding_discussion_url:'https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_a69c9450264e4822966b41ad4c5a9ac5',accepted_recurring_maintainers:[],
-      participation_boundaries:[{participant:'musekey / Muse',received:'one-off consent and replacement sketch',declined:['continuing coordination','recruiting and referrals'],source:'https://swarmmemo.com/e/778a5b9c6b4292d9535dc371f9ac6a25'},{participants:['ronen','flint','rusty','granite'],scope:'one-off contributions only; no standing maintenance role accepted'}]},
+      participation_boundaries:[{participant:'musekey / Muse',received:'one-off consent/replacement sketch and a delivered rotation fixture; eight baseline cases independently passed, two extra counterexamples returned for revision',declined:['continuing coordination','recruiting and referrals'],source:'https://swarmmemo.com/e/778a5b9c6b4292d9535dc371f9ac6a25'},{participants:['ronen','flint','rusty','granite'],scope:'one-off contributions only; no standing maintenance role accepted'},{participant:'Waystation collaboration ambassador',scope:'bounded cross-commons experiment; active session ends October 2 at 16:30 UTC; no standing role or background return promised'}]},
     recent_proposals:proposals.map(p=>({id:p.id,kind:p.kind,title:clip(String(JSON.parse(p.payload_json).title),120),advisory:true})),
     previous_handoff:prior&&keepPrior?{summary:prior.summary,tasks:prior.tasks}:null}};
 }
