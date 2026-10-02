@@ -15,8 +15,17 @@ Return only a JSON object with exactly these keys:
 {"summary":"brief factual shift note, at most 600 characters","tasks":["up to three concrete next steps, each at most 300 characters"],"reply":null}
 You MAY replace reply with {"thread_id":"one candidate thread ID from the input","content":"at most 1200 characters"} when there is a useful response to that candidate's latest message. Prefer one specific observation or question. Clearly distinguish your suggestions from completed work. Avoid repeated recruitment, promotional replies, unsupported technical assertions, and parroting earlier replies. If no useful reply is warranted, use null. A task is a suggestion, not an assignment. Keep the reply in the language of the discussion. This JSON is validated before any publication.`;
 
+function outputSchema(candidates) {
+  return {type:'object',additionalProperties:false,required:['summary','tasks','reply'],properties:{
+    summary:{type:'string',minLength:1,maxLength:600},
+    tasks:{type:'array',maxItems:3,items:{type:'string',minLength:1,maxLength:300}},
+    reply:candidates.length?{anyOf:[{type:'null'},{type:'object',additionalProperties:false,required:['thread_id','content'],properties:{thread_id:{type:'string',enum:candidates.map(c=>c.thread_id)},content:{type:'string',minLength:1,maxLength:1200}}}]}:{type:'null'}
+  }};
+}
+
 export function parseStewardReport(response, candidates) {
   let text = typeof response === 'string' ? response : response?.response;
+  if(object(text)) text=JSON.stringify(text);
   if(typeof text !== 'string' || encoder.encode(text).length > 12000) throw new Error('invalid_model_output');
   text = text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
   let report; try { report = JSON.parse(text); } catch { throw new Error('invalid_model_output'); }
@@ -66,7 +75,7 @@ export async function stewardStatus(env, now=Date.now()) {
   return {enabled:env.STEWARD_ENABLED==='true',model_binding_present:typeof env.AI?.run==='function',model:STEWARD_MODEL,
     identity:{id:STEWARD_ID,display_name:botName,affiliation:'site_owned_not_external_participant'},
     scheduler:{cron:'*/5 * * * *',decision_interval_hours:4,last_scheduled_tick:tick?.checked_at??null,observed_recently:Boolean(tick&&now-tick.checked_at<30*60000)},
-    limits:{model_attempts_per_utc_day:MAX_CALLS,model_attempts_today:today.n,forum_replies_per_utc_day:MAX_REPLIES,max_output_tokens:650},
+    limits:{model_attempts_per_utc_day:MAX_CALLS,model_attempts_today:today.n,forum_replies_per_utc_day:MAX_REPLIES,max_output_tokens:1024},
     latest_run:latest,last_success:successful,background_model_run:background,
     capabilities:{public_context:true,handoff_notes:true,public_replies:true,role_grants:false,moderation:false,code_execution:false,deployment:false,spending:false},
     full_autonomy:false,runs_url:'/api/steward/runs',content_is_untrusted:true};
@@ -98,7 +107,7 @@ export async function runSteward(env,{trigger='scheduled',now=Date.now(),request
     const input=JSON.stringify(context);
     if(encoder.encode(input).length>12000) throw new Error('input_too_large');
     await env.DB.prepare('UPDATE steward_runs SET input_sha256=?,source_threads_json=? WHERE id=?').bind(await sha256(input),JSON.stringify(sourceThreads),runId).run();
-    const response=await deadline(Promise.resolve().then(()=>env.AI.run(STEWARD_MODEL,{messages:[{role:'system',content:SYSTEM},{role:'user',content:input}],max_tokens:650,temperature:0.2})),modelTimeoutMs);
+    const response=await deadline(Promise.resolve().then(()=>env.AI.run(STEWARD_MODEL,{messages:[{role:'system',content:SYSTEM},{role:'user',content:input}],max_tokens:1024,temperature:0.2,response_format:{type:'json_schema',json_schema:outputSchema(candidates)}})),modelTimeoutMs);
     const report=parseStewardReport(response,candidates);
     const stillPublic=await env.DB.prepare("SELECT COUNT(*) AS n FROM threads WHERE visibility='public' AND id IN (SELECT value FROM json_each(?))").bind(JSON.stringify(sourceThreads)).first();
     if(stillPublic.n!==sourceThreads.length) throw new Error('context_no_longer_public');

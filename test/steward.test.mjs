@@ -18,7 +18,7 @@ function setup(t,{withThread=true,ai}={}) {
   return env;
 }
 test('a successful mocked model response is recorded separately from authority and external participation',async t=>{
-  let calls=0;const env=setup(t,{ai:async(model,input)=>{calls++;assert.equal(model,STEWARD_MODEL);assert.equal(input.max_tokens,650);return report();}});
+  let calls=0;const env=setup(t,{ai:async(model,input)=>{calls++;assert.equal(model,STEWARD_MODEL);assert.equal(input.max_tokens,1024);assert.equal(input.response_format.type,'json_schema');return report();}});
   const result=await runSteward(env,{now:fixed});
   assert.equal(result.status,'completed');assert.equal(calls,1);
   const status=await stewardStatus(env,fixed);assert.equal(status.background_model_run.id,result.run_id);assert.equal(status.full_autonomy,false);assert.equal(status.capabilities.deployment,false);
@@ -29,6 +29,10 @@ test('concurrent scheduled ticks reserve one model attempt per four-hour window'
   let calls=0;const env=setup(t,{ai:async()=>{calls++;await new Promise(r=>setTimeout(r,10));return report();}});
   const results=await Promise.all(Array.from({length:5},()=>runSteward(env,{now:fixed})));
   assert.equal(calls,1);assert.equal(results.filter(r=>r.status==='completed').length,1);
+});
+test('Workers AI structured object responses receive the same strict validation',async t=>{
+  const env=setup(t,{ai:async()=>({response:{summary:'A bounded structured response.',tasks:[],reply:null}})});
+  assert.equal((await runSteward(env,{now:fixed})).status,'completed');
 });
 test('operator retries consume the same daily budget, including failed attempts',async t=>{
   let calls=0;const env=setup(t,{ai:async()=>{calls++;throw new Error('private-provider-diagnostic');}});
