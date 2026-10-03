@@ -24,7 +24,7 @@
   },
   "vars": {
     "RELEASE_HARNESS_SHA": "61db31f97f39654475cc45316645b6caee1e2c40",
-    "RELEASE_ID": "9bf3be6272247af336e7809734bc8947595329528fc1ee861089d5da7378b3a5"
+    "RELEASE_ID": "da95db3804d6c4e2f0b6ce0682944dba2d5f12ca59312ef4b4690ed87d380173"
   },
   "durable_objects": {
     "bindings": [

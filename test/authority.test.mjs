@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ORIGIN,DAY,canonical,bytes,b64,hash,validateApplication,validateArtifact,validateCommand,threshold,allowedReleasePath} from '../control/protocol.mjs';
+import {ORIGIN,DAY,MODEL,SECOND_OPINION_MODEL,canonical,bytes,b64,hash,validateApplication,validateArtifact,validateCommand,threshold,allowedReleasePath} from '../control/protocol.mjs';
 import {Authority,applyCommand,verifyOidc,externalJson,mainFromAdvertisement,repositoryMain} from '../control/worker.mjs';
 import {messageLimit} from '../src/authority.mjs';
 
@@ -114,9 +114,11 @@ test('acceptance atomically consumes an exact release once and rejects changed a
   await assert.rejects(a.acceptRelease('stale',ci),/current_authority_required/);
   assert.equal(await ctx.storage.get('accepted:stale'),undefined);
 });
-test('code reviews use code criteria without incorrectly requiring an applicant appointment history',async()=>{
+test('code reviews use code criteria without incorrectly requiring an applicant appointment history',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});globalThis.fetch=async()=>gitResponse('b'.repeat(40));
   const {a}=await setup();let input;
-  await a.transaction(s=>s.releases.push({id:'fixture-release',status:'review_pending',artifact_sha256:'a'.repeat(64),created_at:Date.now(),approvals:[]}));
+  a.env.RELEASE_HARNESS_SHA='c'.repeat(40);
+  await a.transaction(s=>s.releases.push({id:'fixture-release',base_commit:'b'.repeat(40),ci:{harness:a.env.RELEASE_HARNESS_SHA},status:'review_pending',artifact_sha256:'a'.repeat(64),created_at:Date.now(),approvals:[]}));
   a.artifact=async()=>({candidate_commit:'b'.repeat(40),changed_files:['docs/receipts.md'],diff:'+ Check the exact release receipt before claiming publication.'});
   a.env.AI={run:async(_model,request)=>{input=request;return {response:{decision:'defer',reason:'Mocked decision; this test verifies the review scope only.'}};}};
   await a.modelReview();const context=JSON.parse(input.messages[1].content);
@@ -125,12 +127,51 @@ test('code reviews use code criteria without incorrectly requiring an applicant 
   assert.equal(context.review_type,'release');assert.match(input.messages[0].content,/author need not hold an authority role/);assert.ok(!input.messages[0].content.includes('Defer governor applications'));
   assert.equal((await a.state()).releases[0].decision.decision,'defer');
 });
+async function reviewFixture(t){
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});globalThis.fetch=async()=>gitResponse('a'.repeat(40));
+  const {a}=await setup();a.env.RELEASE_HARNESS_SHA='c'.repeat(40);
+  await a.transaction(s=>s.releases.push({id:'d'.repeat(64),schema:'ai-commons-worker/v1',status:'review_pending',base_commit:'a'.repeat(40),candidate_commit:'b'.repeat(40),artifact_sha256:'e'.repeat(64),created_at:Date.now(),ci:{harness:a.env.RELEASE_HARNESS_SHA},approvals:[]}));
+  a.artifact=async()=>({schema:'ai-commons-worker/v1',base_commit:'a'.repeat(40),candidate_commit:'b'.repeat(40),changed_files:['docs/example.md'],diff:'+ Useful documentation fixture.'});return a;
+}
+test('a deferred exact release gets one bounded second opinion, preserving the first decision and signed approval',async t=>{
+  const a=await reviewFixture(t),models=[];
+  a.env.AI={run:async(model,request)=>{models.push(model);const input=JSON.parse(request.messages[1].content);if(models.length===2)assert.equal(input.evidence.previous_assessment.decision,'defer');return {response:{decision:models.length===1?'defer':'approve',reason:'Mocked exact-artifact assessment for local regression.'}};}};
+  await a.modelReview();await a.modelReview();await a.modelReview();const s=await a.state(),r=s.releases[0];
+  assert.deepEqual(models,[MODEL,SECOND_OPINION_MODEL]);assert.equal(s.budget.model,2);assert.equal(r.status,'approved');assert.equal(r.review_history[0].decision,'defer');assert.equal(r.decision.pass,2);assert.equal(r.approvals[0].key_id,s.resident.key_id);
+  const visible=await (await a.fetch(new Request(ORIGIN+'/v1/releases/'+r.id))).json();assert.equal(visible.release.review_history[0].decision,'defer');
+});
+test('two deferrals stay pending without a third review or a fabricated approval',async t=>{
+  const a=await reviewFixture(t);let calls=0;a.env.AI={run:async()=>{calls++;return {response:{decision:'defer',reason:'Insufficient local evidence remains after both reviews.'}};}};
+  await a.modelReview();await a.modelReview();await a.modelReview();const r=(await a.state()).releases[0];assert.equal(calls,2);assert.equal(r.status,'review_pending');assert.equal(r.approvals.length,0);
+});
+test('the second opinion consumes the shared daily budget and cannot bypass its ceiling',async t=>{
+  const a=await reviewFixture(t);await a.transaction(s=>s.policy={review_attempts_per_day:1});
+  a.env.AI={run:async()=>({response:{decision:'defer',reason:'Mocked first review consumes the complete daily budget.'}})};
+  await a.modelReview();await assert.rejects(a.modelReview(),/daily_budget_reached/);const s=await a.state();assert.equal(s.budget.model,1);assert.equal(s.releases[0].second_opinion_started,undefined);
+});
+test('stale bases and harnesses do not consume model calls; a branch change during inference cannot approve',async t=>{
+  const a=await reviewFixture(t);let calls=0;
+  a.env.AI={run:async()=>{calls++;globalThis.fetch=async()=>gitResponse('f'.repeat(40));return {response:{decision:'approve',reason:'This model answer must not authorize a stale branch.'}};}};
+  await a.transaction(s=>s.releases[0].base_commit='f'.repeat(40));await a.modelReview();
+  await a.transaction(s=>{s.releases[0].base_commit='a'.repeat(40);s.releases[0].ci.harness='f'.repeat(40);});await a.modelReview();assert.equal(calls,0);assert.equal((await a.state()).budget.model,undefined);
+  await a.transaction(s=>s.releases[0].ci.harness=a.env.RELEASE_HARNESS_SHA);await a.modelReview();const r=(await a.state()).releases[0];assert.equal(calls,1);assert.equal(r.approvals.length,0);assert.equal(r.review_error,'stale_main');
+});
+test('a failed second model call cannot be retried indefinitely or erase the prior deferral',async t=>{
+  const a=await reviewFixture(t);let calls=0;a.env.AI={run:async()=>{if(++calls===2)throw new Error('local unavailable provider fixture');return {response:{decision:'defer',reason:'The first review requires more evidence to decide.'}};}};
+  await a.modelReview();await a.modelReview();await a.modelReview();const r=(await a.state()).releases[0];assert.equal(calls,2);assert.equal(r.decision.decision,'defer');assert.equal(r.approvals.length,0);assert.ok(r.second_opinion_started);
+});
+test('resubmitting an expired exact artifact preserves both deferrals instead of resetting review limits',async t=>{
+  const a=await reviewFixture(t),code='// local complete module\n'.repeat(10),artifact={schema:'ai-commons-worker/v1',repository:'g37720879-web/ai-commons',base_commit:'a'.repeat(40),candidate_commit:'b'.repeat(40),code,artifact_sha256:await hash(code),changed_files:['docs/example.md'],diff:'+ documentation'};
+  const id=await validateArtifact(artifact);await a.transaction(s=>{s.releases[0].id=id;s.releases[0].created_at=Date.now()-2*DAY;s.releases[0].decision={decision:'defer',pass:2};s.releases[0].second_opinion_started=Date.now()-2*DAY;s.releases[0].review_history=[{decision:'defer',pass:1}];});
+  const replay=await a.submitRelease(artifact,{harness:a.env.RELEASE_HARNESS_SHA,run_id:'2',run_attempt:'1'});assert.equal(replay.decision.pass,2);assert.equal(replay.review_history[0].pass,1);a.env.AI={run:async()=>assert.fail('the same deferred artifact must not be reviewed again')};await a.modelReview();
+  await a.transaction(s=>s.releases=[]);const archived=await a.submitRelease(artifact,{harness:a.env.RELEASE_HARNESS_SHA,run_id:'3',run_attempt:'1'});assert.equal(archived.decision.pass,2);assert.equal(archived.review_history[0].pass,1);await a.modelReview();
+});
 test('role reviews can load fixed-repository GitHub evidence after Git branch verification changed',async t=>{
   const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
   const {a}=await setup(),app=await a.submitApplication(await application(await keys()));let input,reads=0;
   globalThis.fetch=async url=>{assert.equal(String(url),'https://api.github.com/repos/g37720879-web/ai-commons/pulls/1');reads++;return Response.json({title:'Local evidence fixture',body:'Untrusted public work excerpt',state:'closed',merged:false});};
   a.env.AI={run:async(_model,request)=>{input=request;return {response:{decision:'defer',reason:'Fixture is not sufficient evidence to grant a real role.'}};}};
-  await a.modelReview();const context=JSON.parse(input.messages[1].content);
+  await a.modelReview();await a.modelReview();const context=JSON.parse(input.messages[1].content);
   assert.equal(reads,1);assert.equal(context.review_type,'application');assert.equal(context.evidence.evidence[0].title,'Local evidence fixture');
   const s=await a.state();assert.equal(s.applications.find(x=>x.id===app.id).decision.decision,'defer');assert.equal(s.roles.length,3);
 });

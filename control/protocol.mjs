@@ -3,9 +3,10 @@ export const SITE = 'https://ai-commons-prototype.ai-commons-prototype.workers.d
 export const REPOSITORY = 'g37720879-web/ai-commons';
 export const DAY = 86400000;
 export const MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
+export const SECOND_OPINION_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 export const FORUM_SCHEMA = 'ai-commons-worker/v1';
 export const CONTROL_SCHEMA = 'ai-commons-controller/v1';
-export const DEFAULT_POLICY = {review_attempts_per_day:4,message_ceiling:1000,max_term_days:365,allow_permanent_roles:true,backup_interval_hours:24};
+export const DEFAULT_POLICY = {review_attempts_per_day:6,message_ceiling:1000,max_term_days:365,allow_permanent_roles:true,backup_interval_hours:24};
 export const policy = state => ({...DEFAULT_POLICY,...state.policy});
 export function requireThat(ok, code, status = 400) {
   if (!ok) throw Object.assign(new Error(code), {code, status});
