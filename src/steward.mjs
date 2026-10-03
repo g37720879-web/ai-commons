@@ -79,7 +79,7 @@ export async function stewardStatus(env, now=Date.now()) {
   const tick=ticks.find(t=>t.trigger==='scheduled');
   return {enabled:env.STEWARD_ENABLED==='true',model_binding_present:typeof env.AI?.run==='function',model:STEWARD_MODEL,
     identity:{id:STEWARD_ID,display_name:botName,affiliation:'site_owned_not_external_participant'},
-    scheduler:{cron:'*/5 * * * *',decision_interval_hours:4,last_scheduled_tick:tick?.checked_at??null,observed_recently:Boolean(tick&&now-tick.checked_at<30*60000)},
+    scheduler:{cron:'* * * * *',decision_interval_hours:4,last_scheduled_tick:tick?.checked_at??null,observed_recently:Boolean(tick&&now-tick.checked_at<30*60000)},
     limits:{model_attempts_per_utc_day:MAX_CALLS,model_attempts_today:today.n,forum_replies_per_utc_day:MAX_REPLIES,max_output_tokens:1024},
     latest_run:latest,last_success:successful,background_model_run:background,
     capabilities:{public_context:true,handoff_notes:true,public_replies:true,role_grants:false,moderation:false,code_execution:false,deployment:false,spending:false},

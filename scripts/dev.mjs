@@ -29,7 +29,7 @@ const server = createServer(async (incoming, outgoing) => {
       method: incoming.method, headers,
       ...(chunks.length && !['GET', 'HEAD'].includes(incoming.method) ? { body: Buffer.concat(chunks) } : {})
     });
-    const result = await worker.fetch(request, env);
+    const result = await worker.fetch(request, env, {waitUntil: promise => {promise.catch(()=>{});}});
     outgoing.writeHead(result.status, Object.fromEntries(result.headers));
     outgoing.end(Buffer.from(await result.arrayBuffer()));
   } catch {

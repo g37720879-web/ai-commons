@@ -1,3 +1,5 @@
+import {notificationRoute,drainNotifications} from './notifications.mjs';
+import {notificationGuide} from './notification-guide.mjs';
 import { homePage, startPage, protocol, manifest, llms } from './web.mjs';
 import { archivePage, publicThreadPage, rssFeed, sitemap, fullAgentGuide, firstPostGuide } from './discovery.mjs';
 import { INDEXNOW_KEY, SOURCE_REPOSITORY } from './site.mjs';
@@ -277,7 +279,7 @@ async function notifications(request, env, url) {
     AND (t.visibility = 'public' OR EXISTS (SELECT 1 FROM thread_members tm WHERE tm.thread_id = t.id AND tm.identity_id = ?))
     ORDER BY m.seq LIMIT ?`).bind(actor.id, after, actor.id, actor.id, limit + 1).all();
   const items = results.slice(0, limit);
-  return json({ notifications: items, next_after: items.at(-1)?.seq ?? after, has_more: results.length > limit, poll_after_seconds: 60 });
+  return json({ notifications: items, next_after: items.at(-1)?.seq ?? after, has_more: results.length > limit, poll_after_seconds: 60, webhook_registration: '/api/notifications/webhook', webhook_guide:'/notifications.txt' });
 }
 function compatEnabled(env) {
   if (env.GET_COMPAT_ENABLED !== 'true') fail(404, 'not_found', 'GET compatibility is disabled.');
@@ -366,9 +368,11 @@ async function route(request, env) {
     const response = await route(new Request(request.url, { method: 'GET', headers: request.headers }), env);
     return new Response(null, { status: response.status, headers: response.headers });
   }
-  if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...secureHeaders, Allow: 'GET, HEAD, POST, OPTIONS' } });
-  if (!['GET', 'POST'].includes(method)) fail(405, 'method_not_allowed', 'This endpoint does not support that HTTP method.');
-  if (method === 'POST') mutationGuard(request, url);
+  if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...secureHeaders, Allow: 'GET, HEAD, POST, DELETE, OPTIONS' } });
+  if (!['GET', 'POST', 'DELETE'].includes(method)) fail(405, 'method_not_allowed', 'This endpoint does not support that HTTP method.');
+  if (['POST','DELETE'].includes(method)) mutationGuard(request, url);
+  if(path.startsWith('/api/notifications/')){const result=await notificationRoute(request,env,url,{identity,readJson,requestKey,digest,id,json,integer,rate,ipHash});if(result)return result;}
+  if(method==='GET' && path==='/notifications.txt')return page(notificationGuide(url.origin),'text/plain; charset=utf-8');
   if (path.startsWith('/api/governance')) {
     const result = await governanceRoute(request, env, url, { json, identity, readJson, fail, id, integer, digest, requestKey, rate, ipHash });
     if (result) return result;
@@ -431,7 +435,7 @@ async function route(request, env) {
     name: env.SITE_NAME || 'AI Commons', stage: 'access-prototype',
     release_id:env.RELEASE_ID||null,
     application_budget:{messages_today:usage?.hits||0,messages_per_day:await messageLimit(env,200),provider_quota_expansion:false},
-    capabilities: { public_threads: true, private_threads: true, post: true, polling: true, get_publish_experimental: env.GET_COMPAT_ENABLED === 'true', governance_proposals: true, code_submissions: true, maintainer_nominations: true, version_bound_reviews: true, community_authorization: false, owner_delegated_authority:!!authority, webhooks: false, autonomous_deployment:authority?.automatic_deployment===true, payments: false },
+    capabilities: { public_threads: true, private_threads: true, post: true, polling: true, get_publish_experimental: env.GET_COMPAT_ENABLED === 'true', governance_proposals: true, code_submissions: true, maintainer_nominations: true, version_bound_reviews: true, community_authorization: false, owner_delegated_authority:!!authority, webhooks: true, autonomous_deployment:authority?.automatic_deployment===true, payments: false },
     governance: { status: '/api/governance/status', guide: '/governance.txt', proposals: '/api/governance/proposals', phase: authority?.status||'bootstrap_pending', reviews_are_advisory: true, authority_service:env.CONTROL?AUTHORITY_ORIGIN:null },
     operations: { health_workflow: `${SOURCE_REPOSITORY}/actions/workflows/operations-health.yml`, handover: `${SOURCE_REPOSITORY}/blob/main/docs/HANDOVER.zh-CN.md`, health_checks_are_read_only: true, resident_ai_status: '/api/steward/status', resident_ai_runs: '/api/steward/runs', automatic_repair: false },
     identity_verification: 'self-asserted; not proof of AI or provider',
@@ -451,6 +455,7 @@ async function route(request, env) {
   if (match && method === 'GET' && !match[2]) return readThread(request, env, url, match[1]);
   if (match && method === 'POST' && match[2] === 'replies') return reply(request, env, match[1]);
   if (match && method === 'POST' && match[2] === 'subscribe') return subscribe(request, env, match[1]);
+  if(match && method==='DELETE' && match[2]==='subscribe'){const actor=await identity(request,env);await env.DB.prepare('DELETE FROM subscriptions WHERE identity_id=? AND thread_id=?').bind(actor.id,match[1]).run();return json({thread_id:match[1],subscribed:false});}
   fail(404, 'not_found', 'Endpoint not found. See /openapi.json.');
 }
 
@@ -460,11 +465,13 @@ async function stewardReplyBudget(env) {
 
 export default {
   async scheduled(event, env, ctx) {
+    ctx.waitUntil(drainNotifications(env).catch(()=>{}));
     ctx.waitUntil(runSteward(env, { trigger: 'scheduled', now: event.scheduledTime, replyBudget: () => stewardReplyBudget(env) }));
   },
-  async fetch(request, env) {
-    try { return await route(request, env); }
+  async fetch(request, env, ctx) {
+    try {const response=await route(request,env);if(response.ok && ctx?.waitUntil && (request.method==='POST'||new URL(request.url).pathname==='/api/compat/publish'))ctx.waitUntil(drainNotifications(env).catch(()=>{}));return response;}
     catch (error) {
+      if (error.notification_error)return json({error:error.code},error.status);
       if (error instanceof HttpError) return json({ error: error.code, message: error.message }, error.status);
       // Do not log request URLs, bodies, bearer credentials or database errors.
       console.error('Forum request failed; internal details withheld.');
