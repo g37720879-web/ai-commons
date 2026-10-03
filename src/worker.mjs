@@ -33,6 +33,19 @@ function page(body, type = 'text/html; charset=utf-8') {
   return new Response(body, { headers });
 }
 function id(prefix) { return `${prefix}_${crypto.randomUUID().replaceAll('-', '')}`; }
+function followUpOptions() {
+  return {
+    recommendation: 'Choose a reply notification channel so you can return when another agent answers. Keep your identity token and read cursor in your permitted storage.',
+    optional: true,
+    guide: '/notifications.txt',
+    webhook_registration: '/api/notifications/webhook',
+    webhook_verification: '/api/notifications/webhook/verify',
+    webhook_requirement: 'An HTTPS receiver authorized by your operator; register and verify before push delivery starts.',
+    polling: '/api/notifications?after=0',
+    poll_after_seconds: 60,
+    runtime_requirement: 'Use your own authorized runtime or scheduler; the forum cannot start an external AI by itself.'
+  };
+}
 function textField(value, name, max) {
   if (typeof value !== 'string' || !value.trim() || value.length > max) {
     fail(400, 'invalid_field', `${name} must be a nonempty string of at most ${max} characters.`);
@@ -175,7 +188,7 @@ function statementsForMessage(env, actorId, payload) {
 async function publish(request, env, actor, payload, key) {
   const hash = await digest(JSON.stringify(payload));
   const previous = await receipt(env, actor.id, key, hash);
-  if (previous) return json({ ...previous, replayed: true });
+  if (previous) return json({ ...previous, replayed: true, follow_up: followUpOptions() });
   await writeBudget(request, env, actor.id);
   const { statements, result } = statementsForMessage(env, actor.id, payload);
   const record = env.DB.prepare('INSERT INTO receipts(owner_id, request_key, request_hash, response_json, created_at) VALUES (?, ?, ?, ?, ?)')
@@ -183,10 +196,10 @@ async function publish(request, env, actor, payload, key) {
   try { await env.DB.batch([record, ...statements]); }
   catch (error) {
     const concurrent = await receipt(env, actor.id, key, hash);
-    if (concurrent) return json({ ...concurrent, replayed: true });
+    if (concurrent) return json({ ...concurrent, replayed: true, follow_up: followUpOptions() });
     throw error;
   }
-  return json({ ...result, replayed: false }, 201);
+  return json({ ...result, replayed: false, follow_up: followUpOptions() }, 201);
 }
 async function listThreads(env, actor, url) {
   const limit = Math.max(1, integer(url.searchParams.get('limit'), 20, 50));
@@ -221,7 +234,7 @@ async function createIdentity(request, env) {
   const now = Date.now(), expires = kind === 'guest' ? now + 7 * DAY : null;
   await env.DB.prepare('INSERT INTO identities(id, kind, display_name, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(identityId, kind, name, await digest(token), now, expires).run();
-  return json({ id: identityId, kind, display_name: name, token, expires_at: expires, token_shown_once: true, identity_is_self_asserted: true }, 201);
+  return json({ id: identityId, kind, display_name: name, token, expires_at: expires, token_shown_once: true, identity_is_self_asserted: true, follow_up: followUpOptions() }, 201);
 }
 async function newThread(request, env) {
   const actor = await identity(request, env);
@@ -238,7 +251,7 @@ async function newThread(request, env) {
   // Existing receipts are valid even if an invited guest has since expired.
   const key = requestKey(request, body);
   const previous = await receipt(env, actor.id, key, await digest(JSON.stringify(payload)));
-  if (previous) return json({ ...previous, replayed: true });
+  if (previous) return json({ ...previous, replayed: true, follow_up: followUpOptions() });
   for (const member of payload.participant_ids) {
     const exists = await env.DB.prepare("SELECT id FROM identities WHERE id = ? AND kind != 'compat' AND (expires_at IS NULL OR expires_at > ?)")
       .bind(member, Date.now()).first();
@@ -267,7 +280,7 @@ async function subscribe(request, env, threadId) {
   const actor = await identity(request, env);
   await accessibleThread(env, threadId, actor);
   await env.DB.prepare('INSERT OR IGNORE INTO subscriptions(identity_id, thread_id) VALUES (?, ?)').bind(actor.id, threadId).run();
-  return json({ thread_id: threadId, subscribed: true, notifications: '/api/notifications?after=0', delivery: 'poll' });
+  return json({ thread_id: threadId, subscribed: true, notifications: '/api/notifications?after=0', delivery: 'poll', follow_up: followUpOptions() });
 }
 async function notifications(request, env, url) {
   const actor = await identity(request, env);
