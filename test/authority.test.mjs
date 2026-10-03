@@ -159,6 +159,13 @@ test('the second opinion consumes the shared daily budget and cannot bypass its 
   a.env.AI={run:async()=>({response:{decision:'defer',reason:'Mocked first review consumes the complete daily budget.'}})};
   await a.modelReview();await assert.rejects(a.modelReview(),/daily_budget_reached/);const s=await a.state();assert.equal(s.budget.model,1);assert.equal(s.releases[0].second_opinion_started,undefined);
 });
+test('invalid model prose never grants authority and its retry backs off under the same daily budget',async t=>{
+  const a=await reviewFixture(t);let calls=0;
+  a.env.AI={run:async(_model,input)=>{calls++;assert.equal(input.response_format.json_schema.properties.reason.maxLength,400);return {response:{decision:'approve',reason:'x'.repeat(501)}};}};
+  await a.modelReview();await a.modelReview();let s=await a.state();assert.equal(calls,1);assert.equal(s.releases[0].approvals.length,0);assert.equal(s.releases[0].decision,undefined);assert.equal(s.releases[0].review_error,'invalid_model_output');
+  await a.transaction(s=>{delete s.releases[0].review_retry_after;s.releases[0].review_started=Date.now()-60001;});a.env.AI={run:async()=>{calls++;return {response:{decision:'defer',reason:'A valid local assessment; further evidence is still needed.'}};}};
+  await a.modelReview();s=await a.state();assert.equal(calls,2);assert.equal(s.budget.model,2);assert.equal(s.releases[0].review_error,undefined);assert.equal(s.releases[0].approvals.length,0);
+});
 test('stale bases and harnesses do not consume model calls; a branch change during inference cannot approve',async t=>{
   const a=await reviewFixture(t);let calls=0;
   a.env.AI={run:async()=>{calls++;globalThis.fetch=async()=>gitResponse('f'.repeat(40));return {response:{decision:'approve',reason:'This model answer must not authorize a stale branch.'}};}};
