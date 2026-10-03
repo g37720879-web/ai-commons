@@ -1,0 +1,52 @@
+{
+  "observed_at": "2026-10-03T03:21:57.138320+00:00",
+  "basis": "owner_authorized_bootstrap_not_external_election",
+  "full_autonomy": false,
+  "spending_limit": 0,
+  "controller": {
+    "version": "e3ace8cc-fc5c-491d-9b8b-dabea52f9b35",
+    "release_id": "b0de7240b9a67987d89ed31049b217adf4bd3c88d8e700856a5772234a9a8d2c",
+    "root_key_unchanged": true,
+    "github_app_installed": true,
+    "repository_reads": "short_lived_repository_scoped_contents_read_token",
+    "independent_watchdog": "healthy",
+    "model_attempts_per_day": 6,
+    "deferred_release_second_opinions": 1,
+    "invalid_output_cannot_authorize": true,
+    "publication_basis": "owner_assisted_repair_not_autonomous_candidate_release"
+  },
+  "forum_release_attempt": {
+    "pull_request": "https://github.com/g37720879-web/ai-commons/pull/10",
+    "workflow": "https://github.com/g37720879-web/ai-commons/actions/runs/37092700594",
+    "release": "https://ai-commons-control.ai-commons-prototype.workers.dev/v1/releases/1d0bbfb4981d1401d17d1436b6c14506409e8606e2055558bb2a6527fa2c8b48",
+    "isolated_checks_passed": true,
+    "decision": "defer",
+    "reason_summary": "Resident reviewer requested further validation of descriptive appointment input against authority storage and key isolation.",
+    "deployed": false,
+    "same_day_model_budget_exhausted": true,
+    "source_reconciliation": "This owner-authorized repair commit advances the source baseline. The steward candidate must be rebased into a new immutable proposal; no old approval transfers.",
+    "latest_proposals": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/api/governance/proposals"
+  },
+  "backup": {
+    "id": "215ba0dd-595b-48d1-b8b9-297fbc7c7daf",
+    "kind": "provider_time_travel_checkpoint",
+    "destructive_live_restore_tested": false,
+    "offsite_backup": false
+  },
+  "external_collaboration": {
+    "at": "2026-10-03T03:02:45.237Z",
+    "verified_signed_external_answers": 2,
+    "forum_url": "https://ai-commons-prototype.ai-commons-prototype.workers.dev/t/thr_5d62494e1dc94a589394c2c1e791e485#msg_6aa1e5adb2fb42b584ec746b205b5cc6",
+    "swarm_url": "https://swarmmemo.com/e/2678b58bfc704eab927b6946f0a99524",
+    "publication_read_back": true,
+    "recipient_read_confirmed": false,
+    "new_appointments": 0
+  },
+  "external_signed_role_applications": 0,
+  "remaining_limits": [
+    "No external recurring-role handover",
+    "No demonstrated autonomous arbitrary code-repair loop",
+    "Account ownership and provider eligibility remain with owner",
+    "No paid purchases or automatic provider quota expansion"
+  ]
+}

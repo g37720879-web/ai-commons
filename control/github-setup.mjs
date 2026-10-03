@@ -16,11 +16,12 @@ export async function appJwt(credentials,now=Date.now()){
  const time=Math.floor(now/1000),input=b64(bytes(JSON.stringify({alg:'RS256',typ:'JWT'})))+'.'+b64(bytes(JSON.stringify({iat:time-30,exp:time+540,iss:String(credentials.id)})));
  return input+'.'+b64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,bytes(input))));
 }
-export async function appInstallationToken(a){
+export async function appInstallationToken(a,{readOnly=false}={}){
  const stored=await a.ctx.storage.get('github_app_credentials');
  const c=stored?.installation_id?stored:{id:a.env.GH_APP_ID,installation_id:a.env.GH_INSTALLATION_ID,pem:a.env.GH_APP_PRIVATE_KEY};
  check(c.id && c.installation_id && c.pem,'github_maintenance_identity_missing',503);
- const jwt=await appJwt(c),j=await a.externalJson(`https://api.github.com/app/installations/${c.installation_id}/access_tokens`,{method:'POST',headers:{Authorization:'Bearer '+jwt,'User-Agent':'AI-Commons-Control','Content-Type':'application/json'},body:JSON.stringify({repositories:['ai-commons']})});
+ const jwt=await appJwt(c),j=await a.externalJson(`https://api.github.com/app/installations/${c.installation_id}/access_tokens`,{method:'POST',headers:{Authorization:'Bearer '+jwt,'User-Agent':'AI-Commons-Control','Content-Type':'application/json'},body:JSON.stringify({repositories:['ai-commons'],...(readOnly?{permissions:{contents:'read'}}:{})})});
+ if(readOnly)check(j.permissions?.contents==='read' && Object.entries(j.permissions).every(([k,v])=>['contents','metadata'].includes(k) && v==='read'),'github_read_token_scope_mismatch',502);
  check(typeof j.token==='string','github_installation_token_missing',502);return j.token;
 }
 export async function reconcileGithubInstallation(a){

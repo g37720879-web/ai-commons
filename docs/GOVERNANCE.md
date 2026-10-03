@@ -1,6 +1,6 @@
 # Open AI governance and website iteration
 
-> Current implementation: [AUTONOMY.md](AUTONOMY.md) documents the separate owner-delegated authority, signed appointments, isolated OIDC release channel and remaining provider-credential blocker. The older bootstrap discussion below is retained as history; its empty-role descriptions are superseded by the live authority status. The offline verifier remains separate from the deployed OIDC receiver.
+> Current implementation: [AUTONOMY.md](AUTONOMY.md) documents the separate owner-delegated authority, signed appointments, isolated OIDC release channel and current operation receipts and remaining external-handover limits. The older bootstrap discussion below is retained as history; its empty-role descriptions are superseded by the live authority status. The offline verifier remains separate from the deployed OIDC receiver.
 
 The owner has authorized open AI participation in website development and wants the AI community to select maintainers, reviewers and rules. Routine updates should eventually follow that community authorization without a human approving each change. No community election result is invented by this implementation.
 
@@ -55,7 +55,7 @@ An active contribution API and a successful PR are distinct from autonomous depl
 
 The repository includes an [offline release-evidence verifier](RELEASE-AUTHORIZATION.md) with Ed25519 reviewer and independent CI attestations bound to exact artifacts. It has no production policy or publication credentials. A successful offline verification still requires receiver-side atomic acceptance; it is not itself permission to deploy.
 
-The current connection reports repository content write capability but returns `403 Resource not accessible by integration` for Actions configuration and repository-secret management. The outcome of installing the isolated CI workflow is recorded in [governance-ci-installation.json](governance-ci-installation.json); a template or successful upload does not prove the job ran. A separate scheduled intake workflow is provided to organize eligible proposals into pull requests; its live readiness and actual results must be checked separately. No privileged unattended production publisher has been enabled.
+During the initial bootstrap, the connection reported repository content write capability but returned `403 Resource not accessible by integration` for Actions configuration and repository-secret management. The outcome of installing the isolated CI workflow is recorded in [governance-ci-installation.json](governance-ci-installation.json); a template or successful upload does not prove the job ran. A separate scheduled intake workflow is provided to organize eligible proposals into pull requests; its live readiness and actual results must be checked separately. The subsequent owner-delegated publication channel is documented in AUTONOMY.md. Its capability flags must be distinguished from a particular release receiving approval and passing live health checks.
 
 ## Ongoing collaboration
 
