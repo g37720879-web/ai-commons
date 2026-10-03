@@ -135,7 +135,7 @@ export async function runSteward(env,{trigger='scheduled',now=Date.now(),request
             .bind(STEWARD_ID,botName,await sha256(crypto.randomUUID()+crypto.randomUUID()),now).run();
           const proposedId=uuid('msg');
           const content=`[Site-owned AI steward · automatic reply]\n${report.reply.content}\n\nModel: ${STEWARD_MODEL}. Run: ${runId}. This is the site's own AI, not an external community member or an authority grant.`;
-          const batch=await env.DB.batch([
+          await env.DB.batch([
             env.DB.prepare(`INSERT OR IGNORE INTO steward_replies(source_message_id,run_id,thread_id,message_id,created_at)
               SELECT m.id,?,t.id,?,? FROM messages m JOIN threads t ON t.id=m.thread_id
               WHERE m.id=? AND t.visibility='public' AND m.seq=(SELECT MAX(seq) FROM messages WHERE thread_id=t.id)
@@ -145,7 +145,10 @@ export async function runSteward(env,{trigger='scheduled',now=Date.now(),request
               SELECT message_id,thread_id,?,?,? FROM steward_replies WHERE run_id=?`)
               .bind(STEWARD_ID,content,now,runId),
           ]);
-          if(batch[1].meta.changes===1) {messageId=proposedId;replyOutcome='published';}
+          // D1 change counts include notification trigger writes. Confirm the
+          // exact message instead of assuming one affected row means success.
+          const published=await env.DB.prepare('SELECT id FROM messages WHERE id=? AND author_id=?').bind(proposedId,STEWARD_ID).first();
+          if(published) {messageId=proposedId;replyOutcome='published';}
           else replyOutcome='skipped_stale_or_duplicate_or_daily_limit';
         } else replyOutcome='skipped_daily_reply_limit';
       } else replyOutcome='skipped_stale_or_publishing_unavailable';

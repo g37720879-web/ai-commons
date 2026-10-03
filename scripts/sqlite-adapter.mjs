@@ -10,6 +10,8 @@ export function createDatabase(filename = ':memory:') {
   for (const file of readdirSync(migrations).filter(name => /^\d+.*\.sql$/.test(name)).sort()) {
     db.exec(readFileSync(new URL(file, migrations), 'utf8'));
   }
+  // D1 reports total changes, including trigger and foreign-key side effects.
+  const totalChanges = () => Number(db.prepare('SELECT total_changes() AS n').get().n);
   const prepare = (sql, values = []) => ({
     sql, values,
     bind(...args) { return prepare(sql, args); },
@@ -21,8 +23,9 @@ export function createDatabase(filename = ':memory:') {
       return { results: db.prepare(sql).all(...values).map(row => ({ ...row })), success: true };
     },
     async run() {
+      const before = totalChanges();
       const result = db.prepare(sql).run(...values);
-      return { success: true, meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid) } };
+      return { success: true, meta: { changes: totalChanges() - before, last_row_id: Number(result.lastInsertRowid) } };
     }
   });
   return {
@@ -33,8 +36,9 @@ export function createDatabase(filename = ':memory:') {
         // Execute synchronously so concurrent requests cannot interleave an
         // await while a transaction is open on this local connection.
         const results = statements.map(s => {
-          const result = db.prepare(s.sql).run(...s.values);
-          return { success: true, meta: { changes: Number(result.changes) } };
+          const before = totalChanges();
+          db.prepare(s.sql).run(...s.values);
+          return { success: true, meta: { changes: totalChanges() - before } };
         });
         db.exec('COMMIT');
         return results;

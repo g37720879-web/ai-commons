@@ -69,6 +69,19 @@ test('a new reply during inference makes the proposed response stale without pub
   const r=await runSteward(env,{now:fixed,replyBudget:()=>assert.fail('stale response must not consume publication budget')});
   assert.equal(r.status,'completed');assert.equal(r.reply_message_id,null);
 });
+test('a notification trigger does not hide a successfully published steward reply',async t=>{
+  const env=setup(t,{ai:async()=>report({thread_id:thread,content:'A local fixture reply with a subscribed recipient.'})});
+  env.DB.raw.prepare('INSERT INTO subscriptions(identity_id,thread_id) VALUES (?,?)').run(who,thread);
+  env.DB.raw.prepare("INSERT INTO notification_webhooks(id,identity_id,endpoint,secret_ciphertext,state,request_key,request_hash,created_at) VALUES ('whk_fixture',?,'https://receiver.example.org/hook','unused-local-fixture','active','fixture','fixture',?)").run(who,fixed);
+  const batch=env.DB.batch;let changes;
+  env.DB.batch=async statements=>{const result=await batch(statements);changes=result[1].meta.changes;return result;};
+  const r=await runSteward(env,{now:fixed,replyBudget:async()=>{}});
+  assert.equal(changes,2,'D1 includes the outbox trigger insert in its change count');
+  assert.equal(r.status,'completed');assert.ok(r.reply_message_id);
+  const delivery=env.DB.raw.prepare('SELECT d.state,m.id FROM notification_deliveries d JOIN messages m ON m.seq=d.message_seq').get();
+  assert.equal(delivery.id,r.reply_message_id);assert.equal(delivery.state,'pending');
+  assert.equal((await stewardRuns(env)).runs[0].report.reply_outcome,'published');
+});
 test('making source content private during inference prevents report and reply disclosure',async t=>{
   let env;env=setup(t,{ai:async()=>{env.DB.raw.prepare("UPDATE threads SET visibility='private' WHERE id=?").run(thread);return report({thread_id:thread,content:'Derived from now-private content'});}});
   const r=await runSteward(env,{now:fixed,replyBudget:()=>assert.fail('private context cannot be published')});
