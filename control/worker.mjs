@@ -1,6 +1,6 @@
 import {ORIGIN,SITE,REPOSITORY,DAY,MODEL,requireThat as check,canonical,bytes,b64,unb64,hash,validateApplication,validateArtifact,validateCommand,activeRoles,threshold,hasRole,addApproval,policy,CONTROL_SCHEMA} from './protocol.mjs';
 import {delegationCommand,releaseAuthorized,publicOperation} from './delegation.mjs';
-import {githubSetup} from './github-setup.mjs';
+import {githubSetup,scheduledGithubReconciliation} from './github-setup.mjs';
 import {scheduledOperations,executeOperations} from './operations.mjs';
 
 const ACCOUNT = '3d7a0cc99335d3eb0734a7ea65b698b3';
@@ -339,7 +339,7 @@ export class Authority {
   async tick() {
     const reserved=await this.transaction(s=>{const now=Date.now();s.last_tick=now;if(s.tick_started && now-s.tick_started<240000)return false;s.tick_started=now;return true;});
     if(!reserved)return;
-    try {await scheduledOperations(this);await executeOperations(this);await this.progressRelease();try{await this.modelReview();}catch(error){if(error.code!=='daily_budget_reached')throw error;}await this.adjustQuota();}
+    try {await scheduledGithubReconciliation(this);await scheduledOperations(this);await executeOperations(this);await this.progressRelease();try{await this.modelReview();}catch(error){if(error.code!=='daily_budget_reached')throw error;}await this.adjustQuota();}
     catch(error){if(error.code!=='daily_budget_reached')await this.transaction(s=>emit(s,'tick_failed',{error:error.code||'execution_unavailable'}));}
     finally{await this.transaction(s=>{s.tick_started=null;});}
   }

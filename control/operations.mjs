@@ -58,6 +58,11 @@ export async function executeOperations(a) {
 export async function scheduledOperations(a) {
   const s=await a.state(),now=Date.now();
   if(!hasRole(s,s.resident.key_id,['operator'],now))return;
+  const failed=(s.operations||[]).filter(o=>o.action==='backup.create').at(-1);
+  if(failed?.status==='blocked' && ['upstream_cloudflare_401','upstream_cloudflare_403'].includes(failed.error_code) && failed.policy_version===s.version && !failed.restore_attempted_at && (!s.backup_retry_checked || now-s.backup_retry_checked>=3600000)){
+    await a.transaction(s=>{s.backup_retry_checked=now;});
+    await a.residentCommand('operation.retry',failed.id,null,'Retry a denied checkpoint read after possible provider permission repair; never replay database restoration.',s.version);
+  }
   if(!s.backup_checked || now-s.backup_checked>=policy(s).backup_interval_hours*3600000){
     await a.transaction(s=>{s.backup_checked=now;});
     await a.residentCommand('backup.create','forum',null,'Create a provider recovery checkpoint within the delegated no-spending envelope.',s.version);
