@@ -42,6 +42,16 @@ test('repository main uses the fixed read-only Git endpoint and rejects redirect
   globalThis.fetch=async()=>new Response(advertisement('a'.repeat(40)),{headers:{'Content-Type':'text/html'}});
   await assert.rejects(repositoryMain(),/invalid_git_content_type/);
 });
+test('installed controllers read the exact main ref with a repository-scoped read-only App token',async t=>{
+  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});globalThis.fetch=async()=>assert.fail('installed reads must not use shared anonymous Git access');
+  const {generateKeyPairSync}=await import('node:crypto'),p=generateKeyPairSync('rsa',{modulusLength:2048});const {a,ctx}=await setup();await ctx.storage.put('github_app_credentials',{id:123,installation_id:456,pem:p.privateKey.export({type:'pkcs8',format:'pem'})});
+  let wide=false,invalidRef=false;const urls=[];a.externalJson=async(url,options)=>{urls.push(url);if(url.endsWith('/access_tokens')){assert.deepEqual(JSON.parse(options.body),{repositories:['ai-commons'],permissions:{contents:'read'}});return {token:'local-fixture-token',permissions:{contents:wide?'write':'read',metadata:'read'}};}
+    assert.equal(url,'https://api.github.com/repos/g37720879-web/ai-commons/git/ref/heads/main');assert.equal(options.headers.Authorization,'Bearer local-fixture-token');return {ref:invalidRef?'refs/heads/other':'refs/heads/main',object:{type:'commit',sha:'a'.repeat(40)}};};
+  assert.equal(await a.repositoryMain(),'a'.repeat(40));assert.equal(urls.length,2);invalidRef=true;await assert.rejects(a.repositoryMain(),/invalid_github_main_ref/);
+  wide=true;await assert.rejects(a.repositoryMain(),/github_read_token_scope_mismatch/);
+  a.externalJson=async()=>{throw Object.assign(new Error('denied'),{code:'upstream_github_401'});};await assert.rejects(a.repositoryMain(),/denied/);
+  assert.ok(!JSON.stringify(await a.status()).includes('local-fixture-token'));
+});
 test('bootstrap creates a real separate authority root, discloses owner basis and never external affiliation',async()=>{
   const {a,ctx}=await setup(),s=await a.status();assert.equal(s.status,'owner_delegated_bootstrap');assert.equal(s.roles.length,3);assert.equal(s.community_election,false);assert.equal(s.automatic_deployment,false);assert.ok(s.roles.every(r=>r.affiliation==='site_owned_not_external_participant'));
   assert.ok(await ctx.storage.get('resident_private_key'));assert.ok(!JSON.stringify(s).includes('"d":'));
