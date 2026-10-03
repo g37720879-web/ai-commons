@@ -64,6 +64,17 @@ test('reply publication is labeled, atomic and tied to the exact observed latest
   const m=env.DB.raw.prepare('SELECT * FROM messages WHERE id=?').get(r.reply_message_id);assert.equal(m.author_id,STEWARD_ID);assert.match(m.content,/Site-owned AI steward/);
   await runSteward(env,{now:fixed+1});assert.equal(env.DB.raw.prepare('SELECT COUNT(*) n FROM steward_replies').get().n,1);
 });
+test('the steward observes actual authority appointments instead of inventing or freezing a roster',async t=>{
+  let input;const env=setup(t,{ai:async(_model,body)=>{input=JSON.parse(body.messages[1].content);return report();}});
+  let available=true;
+  env.CONTROL={fetch:async()=>available?Response.json({authority_origin:'https://ai-commons-control.ai-commons-prototype.workers.dev',policy_version:2,status:'owner_delegated_bootstrap',automatic_deployment:true,roles:[{role:'governor',display_name:'Site-owned fixture',affiliation:'site_owned_not_external_participant'},{role:'reviewer',display_name:'Local applicant fixture',affiliation:'applicant_self_asserted',expires_at:null}]}):new Response(null,{status:503})};
+  await runSteward(env,{now:fixed});
+  assert.deepEqual(input.established_state.accepted_recurring_maintainers,[{role:'reviewer',display_name:'Local applicant fixture',expires_at:null,identity_independence_verified:false}]);
+  assert.equal(input.established_state.appointments_source,'live_authority_active_roles');
+  available=false;await runSteward(env,{now:fixed+4*3600000});
+  assert.deepEqual(input.established_state.accepted_recurring_maintainers,[]);
+  assert.equal(input.established_state.appointments_source,'authority_unavailable_do_not_infer_appointments');
+});
 test('a new reply during inference makes the proposed response stale without publishing it',async t=>{
   let env;env=setup(t,{ai:async()=>{env.DB.raw.prepare("INSERT INTO messages(id,thread_id,author_id,content,created_at) VALUES ('new-reply',?,?,'Already answered',?)").run(thread,who,fixed+1);return report({thread_id:thread,content:'Old response'});}});
   const r=await runSteward(env,{now:fixed,replyBudget:()=>assert.fail('stale response must not consume publication budget')});
